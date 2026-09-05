@@ -1,0 +1,28 @@
+name: dumpling_drop
+description: "Dumpling Drop: a squishy falling-block puzzle game for kids. Fully offline."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.3.2
+  audioplayers: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  fake_async: ^1.3.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/audio/
+  fonts:
+    - family: Baloo
+      fonts:
+        - asset: assets/fonts/Baloo2.ttf
