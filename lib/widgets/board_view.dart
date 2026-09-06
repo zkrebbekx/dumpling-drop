@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../game/game_controller.dart';
+import '../game/piece.dart';
 import '../theme.dart';
 import 'dumpling.dart';
 
@@ -68,6 +69,23 @@ class BoardViewState extends State<BoardView>
   double _lastSteam = 0;
   bool _reduceMotion = false;
 
+  // Snapshot of the falling piece, kept so the lock event (which
+  // fires after the controller clears `current`) still knows who
+  // landed where.
+  Piece? _fallingPiece;
+  int _fallingRow = 0;
+  int _fallingCol = 0;
+  int _fallingRot = 0;
+
+  static const _rainbow = [
+    Color(0xFFF06A6A),
+    Color(0xFFF7A24B),
+    Color(0xFFF7C948),
+    Color(0xFF7BC47F),
+    Color(0xFF6FB7E8),
+    Color(0xFFB48CE8),
+  ];
+
   Size _cellSizeFor(Size size) {
     final cols = widget.controller.level.cols;
     final rows = widget.controller.level.rows;
@@ -122,6 +140,14 @@ class BoardViewState extends State<BoardView>
     }
     _particles.removeWhere((p) => p.life <= 0);
 
+    final current = widget.controller.current;
+    if (current != null) {
+      _fallingPiece = current;
+      _fallingRow = widget.controller.pieceRow;
+      _fallingCol = widget.controller.pieceCol;
+      _fallingRot = widget.controller.rotation;
+    }
+
     // Cozy ambience: a steam puff rises from the stack now and then.
     if (!_reduceMotion &&
         widget.controller.phase == GamePhase.playing &&
@@ -151,6 +177,7 @@ class BoardViewState extends State<BoardView>
     switch (event) {
       case GameEvent.lock:
         _lockPulse = _time;
+        _spawnCharacterSparkles();
       case GameEvent.move:
         // Which way did the piece go? Peek at the drag direction via
         // a tiny lean impulse; direction comes from column deltas.
@@ -170,6 +197,15 @@ class BoardViewState extends State<BoardView>
         _spawnFloater(rows, points);
       case GameEvent.hardDrop:
         _lockPulse = _time;
+        // A hard drop teleports the piece; the controller still holds
+        // the final position while this event fires.
+        final current = widget.controller.current;
+        if (current != null) {
+          _fallingPiece = current;
+          _fallingRow = widget.controller.pieceRow;
+          _fallingCol = widget.controller.pieceCol;
+          _fallingRot = widget.controller.rotation;
+        }
         _spawnImpactDust();
       default:
         break;
@@ -209,6 +245,47 @@ class BoardViewState extends State<BoardView>
       life: 1.6,
       steam: true,
     ));
+  }
+
+  /// Mei leaves a rainbow where she lands; Ube dusts the spot with
+  /// glitter. The other dumplings land like normal dumplings.
+  void _spawnCharacterSparkles() {
+    final piece = _fallingPiece;
+    if (piece == null || _reduceMotion) return;
+    final kind = piece.kind;
+    if (kind != PieceKind.mei && kind != PieceKind.ube) return;
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final size = box.size;
+    final cell = _cellSizeFor(size).width;
+    final left = (size.width - cell * widget.controller.level.cols) / 2;
+
+    final cells = piece.cells(_fallingRot);
+    for (var i = 0; i < cells.length; i++) {
+      final pc = cells[i];
+      final origin = Offset(
+        left + (_fallingCol + pc.col + 0.5) * cell,
+        (_fallingRow + pc.row + 0.3) * cell,
+      );
+      for (var j = 0; j < 2; j++) {
+        final color = kind == PieceKind.mei
+            ? _rainbow[(i * 2 + j) % _rainbow.length]
+            : (j.isEven
+                ? Colors.white
+                : const Color(0xFFCCB8F0));
+        _particles.add(_Particle(
+          pos: origin,
+          vel: Offset(
+            (_random.nextDouble() - 0.5) * 140,
+            -_random.nextDouble() * 160 - 40,
+          ),
+          color: color,
+          size: cell * (0.08 + _random.nextDouble() * 0.06),
+          life: 0.45 + _random.nextDouble() * 0.3,
+          sparkle: true,
+        ));
+      }
+    }
   }
 
   /// Dust kicked up where a hard-dropped piece slams down.
@@ -446,13 +523,15 @@ class _BoardPainter extends CustomPainter {
             height: rect.height * scale,
           );
           paintDumpling(canvas, scaled, color,
-              eyeOpen: 0, alpha: (1.2 - local).clamp(0.0, 1.0).toDouble());
+              eyeOpen: 0,
+              alpha: (1.2 - local).clamp(0.0, 1.0).toDouble(),
+              kind: kind);
         } else {
           // Idle dumplings blink now and then.
           final phase = (r * 13 + c * 7) % 40 / 10.0;
           final blinkT = (time + phase) % 4.0;
           paintDumpling(canvas, rect, color,
-              eyeOpen: blinkT < 0.12 ? 0 : 1);
+              eyeOpen: blinkT < 0.12 ? 0 : 1, kind: kind);
         }
       }
     }
@@ -494,6 +573,7 @@ class _BoardPainter extends CustomPainter {
           squish: squish,
           lean: lean,
           eyeShift: eyeShift,
+          kind: piece.kind,
         );
       }
     }

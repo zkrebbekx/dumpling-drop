@@ -847,7 +847,7 @@ class _NextPainter extends CustomPainter {
           cell,
         ),
         piece.color(DumplingTheme.fillings),
-        face: false,
+        kind: piece.kind,
       );
     }
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../audio/sfx.dart';
 import '../game/badges.dart';
+import '../game/piece.dart';
 import '../game/progress_store.dart';
 import '../theme.dart';
 import '../widgets/bouncy_button.dart';
@@ -95,12 +96,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            DumplingMascot(size: 76, color: DumplingTheme.mint),
+                            DumplingMascot(size: 76, kind: PieceKind.gyoza),
                             SizedBox(width: 8),
-                            DumplingMascot(
-                                size: 110, color: DumplingTheme.lemon),
+                            DumplingMascot(size: 110, kind: PieceKind.mei),
                             SizedBox(width: 8),
-                            DumplingMascot(size: 76, color: DumplingTheme.pink),
+                            DumplingMascot(size: 76, kind: PieceKind.ube),
                           ],
                         ),
                       ],

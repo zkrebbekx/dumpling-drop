@@ -16,7 +16,12 @@ row to make the dumplings pop. Clear the goal to win the level.
   with visible score targets.
 - **Sticker Book**: 16 collectible award stickers with hand-painted
   medallion art.
-- **Meet the Dumplings**: a character page for the seven pieces.
+- **A real cast**: the seven pieces are characters with signature
+  looks — Mei the unicorn (horn and rainbow mane), Ube the glitter
+  dreamer, Gyo with a flame tuft, Po in sunglasses, Eda the sprout,
+  Veg the ninja, and Bao the classic. Each has a type, a bio, likes,
+  and a signature move on its collectible card in Meet the Dumplings.
+  Mei lands in a burst of rainbow sparkles; Ube lands in glitter.
 - **Kid-first design**: big hold-to-repeat buttons, a ghost landing
   guide, gentle wall kicks, a lock-delay grace period, gesture hints,
   a head-start retry on long levels, and no harsh fail states.

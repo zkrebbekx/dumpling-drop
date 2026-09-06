@@ -1,4 +1,6 @@
 import 'package:dumpling_drop/game/badges.dart';
+import 'package:dumpling_drop/game/characters.dart';
+import 'package:dumpling_drop/game/piece.dart';
 import 'package:dumpling_drop/game/levels.dart';
 import 'package:dumpling_drop/game/progress_store.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -154,6 +156,19 @@ void main() {
       final earned = earnedBadges(store.statsSnapshot());
       expect(earned, contains('special'));
       expect(earned, isNot(contains('special5')));
+    });
+  });
+  group('characters', () {
+    test('every piece kind has a complete character card', () {
+      for (final kind in PieceKind.values) {
+        final info = characters[kind];
+        expect(info, isNotNull, reason: '$kind needs a character');
+        expect(info!.name, isNotEmpty);
+        expect(info.type, isNotEmpty);
+        expect(info.bio, isNotEmpty);
+        expect(info.likes, isNotEmpty);
+        expect(info.move, isNotEmpty);
+      }
     });
   });
 }

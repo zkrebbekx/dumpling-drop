@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../game/characters.dart';
 import '../game/piece.dart';
 import '../theme.dart';
 import '../widgets/bouncy_button.dart';
@@ -7,20 +8,11 @@ import '../widgets/dumpling.dart';
 import '../widgets/motion.dart';
 import '../widgets/steam_background.dart';
 
-/// Meet the Dumplings: one card per piece, with a name and a line.
-/// Kids bond with named characters; this page gives the cast a home.
+/// Meet the Dumplings: a collectible-style card per character, with
+/// a type, a story, likes, and a signature move. Kids bond with named
+/// characters; this page gives the cast a home.
 class FriendsScreen extends StatelessWidget {
   const FriendsScreen({super.key});
-
-  static const _bios = {
-    PieceKind.po: 'Long and brave. Po fills big gaps in one go!',
-    PieceKind.bao: 'Round and cozy. Bao fits snug in corners.',
-    PieceKind.mei: 'Sweet and pointy. Mei pokes into tricky spots.',
-    PieceKind.edamame: 'A little zig. Eda loves the wiggly stacks.',
-    PieceKind.gyoza: 'A little zag. Gyo is Eda\'s mirror twin.',
-    PieceKind.ube: 'Purple power! Ube hooks around the edges.',
-    PieceKind.veggie: 'Full of greens. Veg hooks the other way.',
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -54,46 +46,9 @@ class FriendsScreen extends StatelessWidget {
                   children: [
                     for (final kind in PieceKind.values)
                       PopIn(
-                        delay: Duration(
-                            milliseconds: 40 + kind.index * 55),
-                        child: Container(
-                        margin: const EdgeInsets.only(bottom: 14),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: DumplingTheme.fillings[kind.index],
-                            width: 3,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            DumplingMascot(
-                              size: 72,
-                              color: DumplingTheme.fillings[kind.index],
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Text(kind.fullName,
-                                      style:
-                                          DumplingTheme.display(size: 22)),
-                                  Text(
-                                    _bios[kind]!,
-                                    style: DumplingTheme.body(
-                                        size: 15,
-                                        color: DumplingTheme.inkSoft),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                        delay:
+                            Duration(milliseconds: 40 + kind.index * 55),
+                        child: _CharacterCard(kind: kind),
                       ),
                   ],
                 ),
@@ -102,6 +57,118 @@ class FriendsScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CharacterCard extends StatelessWidget {
+  final PieceKind kind;
+
+  const _CharacterCard({required this.kind});
+
+  @override
+  Widget build(BuildContext context) {
+    final info = characters[kind]!;
+    final bodyColor = DumplingBodyColors.of(kind);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: 0.85),
+            bodyColor.withValues(alpha: 0.35),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: info.typeColor, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: info.typeColor.withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              DumplingMascot(size: 86, kind: kind),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(info.name,
+                            style: DumplingTheme.display(size: 26)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            info.title,
+                            overflow: TextOverflow.ellipsis,
+                            style: DumplingTheme.body(
+                                size: 15, color: DumplingTheme.inkSoft),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: info.typeColor,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        '${info.type} type',
+                        style: DumplingTheme.body(
+                            size: 14, color: Colors.white, weight: 700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(info.bio, style: DumplingTheme.body(size: 15)),
+          const SizedBox(height: 8),
+          _fact('Likes', info.likes, info.typeColor),
+          const SizedBox(height: 4),
+          _fact('Move', info.move, info.typeColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _fact(String label, String value, Color color) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 58,
+          padding: const EdgeInsets.symmetric(vertical: 1),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          alignment: Alignment.center,
+          child: Text(label,
+              style: DumplingTheme.body(
+                  size: 13, color: DumplingTheme.inkSoft, weight: 700)),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(value, style: DumplingTheme.body(size: 14)),
+        ),
+      ],
     );
   }
 }
