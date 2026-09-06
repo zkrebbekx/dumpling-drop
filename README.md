@@ -22,8 +22,12 @@ row to make the dumplings pop. Clear the goal to win the level.
   a head-start retry on long levels, and no harsh fail states.
 - **Squishy feel**: squish animations, blink cycles, lean-while-moving,
   eyes that watch the landing spot, pop particles, floating score
-  text, rising combo pitch, haptics, steam, confetti, and a screen
-  wiggle on a four-line "Dumpling Feast".
+  text, rising combo pitch, haptics, steam puffs from the stack,
+  impact dust on hard drops, confetti, and a screen wiggle on a
+  four-line "Dumpling Feast".
+- **One art style everywhere**: a painted in-game icon set, bouncy
+  screen transitions, staggered pop-in menus, and a score count-up.
+  Every animation honors the platform reduced-motion setting.
 - **Original sound**: every sound effect and the music loop are
   synthesized by `tool/gen_sounds.dart`. The game ships with zero
   licensed audio.

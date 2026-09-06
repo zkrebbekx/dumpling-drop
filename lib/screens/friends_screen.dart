@@ -4,6 +4,7 @@ import '../game/piece.dart';
 import '../theme.dart';
 import '../widgets/bouncy_button.dart';
 import '../widgets/dumpling.dart';
+import '../widgets/motion.dart';
 import '../widgets/steam_background.dart';
 
 /// Meet the Dumplings: one card per piece, with a name and a line.
@@ -52,7 +53,10 @@ class FriendsScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(20),
                   children: [
                     for (final kind in PieceKind.values)
-                      Container(
+                      PopIn(
+                        delay: Duration(
+                            milliseconds: 40 + kind.index * 55),
+                        child: Container(
                         margin: const EdgeInsets.only(bottom: 14),
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -89,6 +93,7 @@ class FriendsScreen extends StatelessWidget {
                             ),
                           ],
                         ),
+                      ),
                       ),
                   ],
                 ),

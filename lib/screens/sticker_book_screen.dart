@@ -4,6 +4,7 @@ import '../game/badges.dart';
 import '../game/progress_store.dart';
 import '../theme.dart';
 import '../widgets/bouncy_button.dart';
+import '../widgets/motion.dart';
 import '../widgets/steam_background.dart';
 import '../widgets/sticker_art.dart';
 
@@ -56,9 +57,12 @@ class StickerBookScreen extends StatelessWidget {
                   crossAxisSpacing: 14,
                   childAspectRatio: 1.15,
                   children: [
-                    for (final badge in allBadges)
-                      _StickerTile(
-                          badge: badge, owned: owned.contains(badge.id)),
+                    for (final (i, badge) in allBadges.indexed)
+                      PopIn(
+                        delay: Duration(milliseconds: 40 + i * 35),
+                        child: _StickerTile(
+                            badge: badge, owned: owned.contains(badge.id)),
+                      ),
                   ],
                 ),
               ),

@@ -14,6 +14,8 @@ import '../widgets/board_view.dart';
 import '../widgets/bouncy_button.dart';
 import '../widgets/confetti.dart';
 import '../widgets/dumpling.dart';
+import '../widgets/motion.dart';
+import '../widgets/painted_icons.dart';
 import '../widgets/stars_row.dart';
 import '../widgets/steam_background.dart';
 import '../widgets/sticker_art.dart';
@@ -412,17 +414,22 @@ class _GameScreenState extends State<GameScreen>
       child: Container(
         color: DumplingTheme.ink.withValues(alpha: 0.35),
         alignment: Alignment.center,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 30),
-          padding: const EdgeInsets.all(26),
-          decoration: BoxDecoration(
-            color: DumplingTheme.cream,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: DumplingTheme.bamboo, width: 4),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: children,
+        child: PopIn(
+          child: SingleChildScrollView(
+            child: Container(
+              margin: const EdgeInsets.symmetric(
+                  horizontal: 30, vertical: 24),
+              padding: const EdgeInsets.all(26),
+              decoration: BoxDecoration(
+                color: DumplingTheme.cream,
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: DumplingTheme.bamboo, width: 4),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: children,
+              ),
+            ),
           ),
         ),
       ),
@@ -625,8 +632,11 @@ class _GameScreenState extends State<GameScreen>
       const SizedBox(height: 10),
       StarsRow(stars: stars, size: 54, animated: true),
       const SizedBox(height: 8),
-      Text('Score: ${_controller.score}',
-          style: DumplingTheme.body(size: 22)),
+      CountUp(
+        value: _controller.score,
+        prefix: 'Score: ',
+        style: DumplingTheme.body(size: 22),
+      ),
       Text('Best: ${widget.store.bestScoreFor(widget.level.number)}',
           style:
               DumplingTheme.body(size: 16, color: DumplingTheme.inkSoft)),
@@ -653,10 +663,8 @@ class _GameScreenState extends State<GameScreen>
           color: DumplingTheme.mint,
           onPressed: () {
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) =>
-                    GameScreen(level: nextLevel, store: widget.store),
-              ),
+              bouncyRoute(
+                  GameScreen(level: nextLevel, store: widget.store)),
             );
           },
           child: Text('Next Level!', style: DumplingTheme.display(size: 26)),
@@ -780,7 +788,7 @@ class _GoalBar extends StatelessWidget {
             children: [
               Text(label, style: DumplingTheme.body(size: 14)),
               const SizedBox(width: 3),
-              const Text('🥟', style: TextStyle(fontSize: 12)),
+              const PaintedIcon(GameIcon.dumpling, size: 13),
             ],
           ),
         ),

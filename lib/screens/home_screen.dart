@@ -6,6 +6,8 @@ import '../game/progress_store.dart';
 import '../theme.dart';
 import '../widgets/bouncy_button.dart';
 import '../widgets/dumpling.dart';
+import '../widgets/motion.dart';
+import '../widgets/painted_icons.dart';
 import '../widgets/steam_background.dart';
 import 'friends_screen.dart';
 import 'level_map_screen.dart';
@@ -74,16 +76,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                     blurRadius: 0)
                               ]),
                         ),
-                        Text(
-                          'DROP!',
-                          style: DumplingTheme.display(size: 72).copyWith(
-                            color: DumplingTheme.peach,
-                            shadows: const [
-                              Shadow(
-                                  color: Color(0xFFB9854A),
-                                  offset: Offset(0, 4),
-                                  blurRadius: 0),
-                            ],
+                        Sway(
+                          radians: 0.03,
+                          child: Text(
+                            'DROP!',
+                            style: DumplingTheme.display(size: 72).copyWith(
+                              color: DumplingTheme.peach,
+                              shadows: const [
+                                Shadow(
+                                    color: Color(0xFFB9854A),
+                                    offset: Offset(0, 4),
+                                    blurRadius: 0),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -107,10 +112,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: DumplingTheme.mint,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 56, vertical: 18),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => LevelMapScreen(store: store)),
-                ).then((_) => setState(() {})),
+                onPressed: () => Navigator.of(context)
+                    .push(bouncyRoute(LevelMapScreen(store: store)))
+                    .then((_) => setState(() {})),
                 child: Text('PLAY!',
                     style: DumplingTheme.display(size: 36)),
               ),
@@ -122,14 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: DumplingTheme.pink,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 14),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => StickerBookScreen(store: store)),
-                    ).then((_) => setState(() {})),
+                    onPressed: () => Navigator.of(context)
+                        .push(bouncyRoute(StickerBookScreen(store: store)))
+                        .then((_) => setState(() {})),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('📖', style: TextStyle(fontSize: 22)),
+                        const PaintedIcon(GameIcon.book, size: 26),
                         const SizedBox(width: 8),
                         Text('Stickers',
                             style: DumplingTheme.display(size: 22)),
@@ -141,14 +144,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: DumplingTheme.lilac,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 14),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const FriendsScreen()),
-                    ),
+                    onPressed: () => Navigator.of(context)
+                        .push(bouncyRoute(const FriendsScreen())),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('🥟', style: TextStyle(fontSize: 22)),
+                        const PaintedIcon(GameIcon.dumpling, size: 24),
                         const SizedBox(width: 8),
                         Text('Friends',
                             style: DumplingTheme.display(size: 22)),

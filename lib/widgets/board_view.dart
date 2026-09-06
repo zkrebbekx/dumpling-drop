@@ -15,6 +15,9 @@ class _Particle {
   final double fullLife;
   final bool sparkle;
 
+  /// Steam drifts up slowly, ignores gravity, and grows as it fades.
+  final bool steam;
+
   _Particle({
     required this.pos,
     required this.vel,
@@ -22,6 +25,7 @@ class _Particle {
     required this.size,
     required this.life,
     this.sparkle = false,
+    this.steam = false,
   }) : fullLife = life;
 }
 
@@ -61,6 +65,8 @@ class BoardViewState extends State<BoardView>
   double _shakeStart = -10;
   double _leanTime = -10;
   int _leanDir = 0;
+  double _lastSteam = 0;
+  bool _reduceMotion = false;
 
   Size _cellSizeFor(Size size) {
     final cols = widget.controller.level.cols;
@@ -111,10 +117,18 @@ class BoardViewState extends State<BoardView>
 
     for (final p in _particles) {
       p.pos += p.vel * dt;
-      p.vel += const Offset(0, 900) * dt; // gravity
+      if (!p.steam) p.vel += const Offset(0, 900) * dt; // gravity
       p.life -= dt;
     }
     _particles.removeWhere((p) => p.life <= 0);
+
+    // Cozy ambience: a steam puff rises from the stack now and then.
+    if (!_reduceMotion &&
+        widget.controller.phase == GamePhase.playing &&
+        _time - _lastSteam > 1.6) {
+      _lastSteam = _time;
+      _spawnSteamPuff();
+    }
     for (final f in _floaters) {
       f.age += dt;
     }
@@ -156,12 +170,78 @@ class BoardViewState extends State<BoardView>
         _spawnFloater(rows, points);
       case GameEvent.hardDrop:
         _lockPulse = _time;
+        _spawnImpactDust();
       default:
         break;
     }
   }
 
   int _lastCol = 0;
+
+  /// A soft white puff drifting up from the top of a random occupied
+  /// column. Makes the basket feel freshly steamed.
+  void _spawnSteamPuff() {
+    final controller = widget.controller;
+    final board = controller.board;
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final occupied = <(int, int)>[];
+    for (var c = 0; c < controller.level.cols; c++) {
+      for (var r = 0; r < controller.level.rows; r++) {
+        if (board.at(r, c) != null) {
+          occupied.add((r, c));
+          break;
+        }
+      }
+    }
+    if (occupied.isEmpty) return;
+    final (row, col) = occupied[_random.nextInt(occupied.length)];
+    final size = box.size;
+    final cell = _cellSizeFor(size).width;
+    final left = (size.width - cell * controller.level.cols) / 2;
+    _particles.add(_Particle(
+      pos: Offset(
+          left + (col + 0.3 + _random.nextDouble() * 0.4) * cell,
+          row * cell),
+      vel: Offset((_random.nextDouble() - 0.5) * 12, -26 - _random.nextDouble() * 14),
+      color: Colors.white,
+      size: cell * (0.16 + _random.nextDouble() * 0.1),
+      life: 1.6,
+      steam: true,
+    ));
+  }
+
+  /// Dust kicked up where a hard-dropped piece slams down.
+  void _spawnImpactDust() {
+    final controller = widget.controller;
+    final piece = controller.current;
+    if (piece == null) return;
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final size = box.size;
+    final cell = _cellSizeFor(size).width;
+    final left = (size.width - cell * controller.level.cols) / 2;
+    // The lowest cell in each column of the piece.
+    final bottoms = <int, int>{};
+    for (final pc in piece.cells(controller.rotation)) {
+      final c = controller.pieceCol + pc.col;
+      final r = controller.pieceRow + pc.row;
+      bottoms[c] = max(bottoms[c] ?? r, r);
+    }
+    for (final entry in bottoms.entries) {
+      for (final dir in [-1, 1]) {
+        _particles.add(_Particle(
+          pos: Offset(left + (entry.key + 0.5) * cell,
+              (entry.value + 1) * cell),
+          vel: Offset(dir * (40 + _random.nextDouble() * 60),
+              -20 - _random.nextDouble() * 40),
+          color: DumplingTheme.creamDark,
+          size: cell * 0.12,
+          life: 0.3 + _random.nextDouble() * 0.15,
+        ));
+      }
+    }
+  }
 
   void _spawnFloater(List<int>? rows, int? points) {
     if (points == null || rows == null || rows.isEmpty) return;
@@ -230,6 +310,7 @@ class BoardViewState extends State<BoardView>
 
   @override
   Widget build(BuildContext context) {
+    _reduceMotion = MediaQuery.of(context).disableAnimations;
     return CustomPaint(
       painter: _BoardPainter(
         controller: widget.controller,
@@ -453,6 +534,17 @@ class _BoardPainter extends CustomPainter {
     // Particles fly above everything, outside the clip.
     for (final p in particles) {
       final fade = (p.life / p.fullLife).clamp(0.0, 1.0);
+      if (p.steam) {
+        // Steam grows and thins as it rises.
+        canvas.drawCircle(
+          p.pos,
+          p.size * (1.8 - fade * 0.8),
+          Paint()
+            ..color = p.color.withValues(alpha: 0.3 * fade)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+        );
+        continue;
+      }
       final paint = Paint()..color = p.color.withValues(alpha: fade);
       if (p.sparkle) {
         _paintStar(canvas, p.pos, p.size * (0.7 + fade * 0.5), paint);

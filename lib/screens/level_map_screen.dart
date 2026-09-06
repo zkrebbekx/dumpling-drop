@@ -4,8 +4,16 @@ import '../game/levels.dart';
 import '../game/progress_store.dart';
 import '../theme.dart';
 import '../widgets/bouncy_button.dart';
+import '../widgets/motion.dart';
+import '../widgets/painted_icons.dart';
 import '../widgets/steam_background.dart';
 import 'game_screen.dart';
+
+const _difficultyIcons = {
+  Difficulty.easy: GameIcon.steamer,
+  Difficulty.medium: GameIcon.pan,
+  Difficulty.hard: GameIcon.chili,
+};
 
 /// Pick a level. Levels sit on a winding path, grouped by difficulty.
 class LevelMapScreen extends StatefulWidget {
@@ -26,9 +34,7 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
 
   Future<void> _play(LevelConfig level) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => GameScreen(level: level, store: widget.store),
-      ),
+      bouncyRoute(GameScreen(level: level, store: widget.store)),
     );
     if (mounted) setState(() {});
   }
@@ -69,12 +75,13 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 30),
                   children: [
-                    _SpecialCard(store: store, onPlay: _play),
+                    PopIn(
+                        child: _SpecialCard(store: store, onPlay: _play)),
                     Padding(
                       padding: const EdgeInsets.only(top: 16, bottom: 10),
                       child: Row(
                         children: [
-                          const Text('🍱', style: TextStyle(fontSize: 26)),
+                          const PaintedIcon(GameIcon.bento, size: 28),
                           const SizedBox(width: 8),
                           Text(
                             'Free Play',
@@ -89,18 +96,20 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
                       runSpacing: 14,
                       children: [
                         for (var i = 0; i < freePlayLevels.length; i++)
-                          _LevelNode(
-                            level: freePlayLevels[i],
-                            stars: 0,
-                            best: store
-                                .bestScoreFor(freePlayLevels[i].number),
-                            // Each basket opens when its difficulty
-                            // tier is beaten: levels 5, 10, 15.
-                            unlocked:
-                                store.starsFor((i + 1) * 5) > 0,
-                            color: _difficultyColors[
-                                freePlayLevels[i].difficulty]!,
-                            onTap: () => _play(freePlayLevels[i]),
+                          PopIn(
+                            delay: Duration(milliseconds: 60 + i * 50),
+                            child: _LevelNode(
+                              level: freePlayLevels[i],
+                              stars: 0,
+                              best: store
+                                  .bestScoreFor(freePlayLevels[i].number),
+                              // Each basket opens when its difficulty
+                              // tier is beaten: levels 5, 10, 15.
+                              unlocked: store.starsFor((i + 1) * 5) > 0,
+                              color: _difficultyColors[
+                                  freePlayLevels[i].difficulty]!,
+                              onTap: () => _play(freePlayLevels[i]),
+                            ),
                           ),
                       ],
                     ),
@@ -109,8 +118,8 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
                         padding: const EdgeInsets.only(top: 16, bottom: 10),
                         child: Row(
                           children: [
-                            Text(entry.key.emoji,
-                                style: const TextStyle(fontSize: 26)),
+                            PaintedIcon(_difficultyIcons[entry.key]!,
+                                size: 28),
                             const SizedBox(width: 8),
                             Text(
                               entry.key.label,
@@ -124,13 +133,17 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
                         spacing: 14,
                         runSpacing: 14,
                         children: [
-                          for (final level in entry.value)
-                            _LevelNode(
-                              level: level,
-                              stars: store.starsFor(level.number),
-                              unlocked: store.isUnlocked(level.number),
-                              color: _difficultyColors[entry.key]!,
-                              onTap: () => _play(level),
+                          for (final (i, level) in entry.value.indexed)
+                            PopIn(
+                              delay:
+                                  Duration(milliseconds: 120 + i * 45),
+                              child: _LevelNode(
+                                level: level,
+                                stars: store.starsFor(level.number),
+                                unlocked: store.isUnlocked(level.number),
+                                color: _difficultyColors[entry.key]!,
+                                onTap: () => _play(level),
+                              ),
                             ),
                         ],
                       ),
@@ -161,7 +174,7 @@ class _SpecialCard extends StatelessWidget {
     final stars = store.starsFor(special.number);
     final content = Row(
       children: [
-        const Text('☀️', style: TextStyle(fontSize: 34)),
+        const PaintedIcon(GameIcon.sun, size: 36),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -248,8 +261,8 @@ class _LevelNode extends StatelessWidget {
                   size: 34,
                   color: DumplingTheme.ink.withValues(alpha: 0.3))
               : endless
-                  ? Text(level.difficulty.emoji,
-                      style: const TextStyle(fontSize: 30))
+                  ? PaintedIcon(_difficultyIcons[level.difficulty]!,
+                      size: 32)
                   : Text('${level.number}',
                       style: DumplingTheme.display(size: 34)),
           Text(
