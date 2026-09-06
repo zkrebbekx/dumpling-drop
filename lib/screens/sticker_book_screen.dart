@@ -5,6 +5,7 @@ import '../game/progress_store.dart';
 import '../theme.dart';
 import '../widgets/bouncy_button.dart';
 import '../widgets/steam_background.dart';
+import '../widgets/sticker_art.dart';
 
 /// Every sticker the player can collect. Locked ones show as a hint.
 class StickerBookScreen extends StatelessWidget {
@@ -100,10 +101,7 @@ class _StickerTile extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Opacity(
-            opacity: owned ? 1 : 0.35,
-            child: Text(badge.emoji, style: const TextStyle(fontSize: 44)),
-          ),
+          StickerArt(badgeId: badge.id, size: 56, dimmed: !owned),
           const SizedBox(height: 6),
           Text(
             owned ? badge.name : '???',

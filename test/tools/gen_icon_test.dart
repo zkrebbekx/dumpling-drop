@@ -78,4 +78,35 @@ void main() {
       expect(file.existsSync(), isTrue);
     });
   });
+
+  testWidgets('render adaptive icon foreground', (tester) async {
+    if (!_enabled) {
+      markTestSkipped('Pass --dart-define=genIcon=true to render the icon.');
+      return;
+    }
+    await tester.runAsync(() async {
+      // Transparent layer for the Android adaptive icon. The launcher
+      // masks to the middle ~66%, so the dumpling stays small.
+      const size = 1024.0;
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      const rect = Rect.fromLTWH(0, 0, size, size);
+      paintDumpling(
+        canvas,
+        Rect.fromCenter(
+            center: rect.center.translate(0, size * 0.02),
+            width: size * 0.46,
+            height: size * 0.46),
+        DumplingTheme.lemon,
+        squish: 0.18,
+      );
+      final image =
+          await recorder.endRecording().toImage(size.toInt(), size.toInt());
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      final file = File('build/icon-fg-1024.png');
+      file.parent.createSync(recursive: true);
+      file.writeAsBytesSync(bytes!.buffer.asUint8List());
+      expect(file.existsSync(), isTrue);
+    });
+  });
 }

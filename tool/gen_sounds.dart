@@ -235,19 +235,35 @@ List<double> _badge() => seq([
       tone(f0: 1175, seconds: 0.3, gain: 0.55, harmonics: 0.5),
     ]);
 
-/// A gentle pentatonic loop, about nine seconds, quiet and warm.
+/// A gentle pentatonic loop: two 16-beat phrases (A and B) with a
+/// walking bass and sparse high bells, about nineteen seconds, so the
+/// loop does not grate on grown-up ears.
 List<double> _bgm() {
-  const bpm = 108.0;
+  const bpm = 104.0;
   final beat = 60.0 / bpm;
-  // C major pentatonic, two relaxed phrases.
-  const melody = [
+  // C major pentatonic. Phrase A states the tune; phrase B answers
+  // higher and resolves home.
+  const phraseA = [
     523.25, 587.33, 659.25, 783.99, // C D E G
     659.25, 587.33, 523.25, 440.00, // E D C A4
     523.25, 659.25, 783.99, 880.00, // C E G A5
     783.99, 659.25, 587.33, 523.25, // G E D C
   ];
-  const bass = [261.63, 220.0, 174.61, 196.0]; // C A F G
-  var s = silence(beat * 16 + 0.4);
+  const phraseB = [
+    659.25, 783.99, 880.00, 1046.50, // E G A C6
+    880.00, 783.99, 659.25, 587.33, // A G E D
+    659.25, 587.33, 523.25, 587.33, // E D C D
+    659.25, 587.33, 523.25, 523.25, // E D C C
+  ];
+  final melody = [...phraseA, ...phraseB];
+  const bass = [
+    261.63, 220.0, 174.61, 196.0, // C A F G
+    261.63, 174.61, 196.0, 261.63, // C F G C
+  ];
+  // A bell answers on a few off-beats, one octave up.
+  const bells = {2: 1318.51, 10: 1567.98, 18: 1760.0, 26: 1567.98};
+
+  var s = silence(beat * 32 + 0.4);
   for (var i = 0; i < melody.length; i++) {
     s = at(
         s,
@@ -270,6 +286,16 @@ List<double> _bgm() {
             harmonics: 0.15),
         i * beat * 4);
   }
+  for (final entry in bells.entries) {
+    s = at(
+        s,
+        tone(
+            f0: entry.value,
+            seconds: beat * 1.4,
+            gain: 0.10,
+            attack: 0.005),
+        (entry.key + 0.5) * beat);
+  }
   // Trim to an exact loop length.
-  return s.sublist(0, (beat * 16 * sampleRate).round());
+  return s.sublist(0, (beat * 32 * sampleRate).round());
 }

@@ -24,7 +24,11 @@ enum GameEvent {
   lose,
 }
 
-typedef GameEventListener = void Function(GameEvent event, {List<int>? rows});
+typedef GameEventListener = void Function(
+  GameEvent event, {
+  List<int>? rows,
+  int? points,
+});
 
 /// Runs one game of Dumpling Drop for one level.
 ///
@@ -41,9 +45,9 @@ class GameController extends ChangeNotifier {
   void removeEventListener(GameEventListener listener) =>
       _eventListeners.remove(listener);
 
-  void _emit(GameEvent event, {List<int>? rows}) {
+  void _emit(GameEvent event, {List<int>? rows, int? points}) {
     for (final listener in List.of(_eventListeners)) {
-      listener(event, rows: rows);
+      listener(event, rows: rows, points: points);
     }
   }
 
@@ -76,10 +80,13 @@ class GameController extends ChangeNotifier {
   static const _clearDelay = Duration(milliseconds: 420);
   static const _maxLockResets = 4;
 
-  GameController({required this.level, int? seed})
+  /// [startLines] gives a head start toward the goal — the mercy
+  /// retry on long levels credits half the lines from the lost run.
+  GameController({required this.level, int? seed, int startLines = 0})
       : _random = Random(seed) {
     board = Board(rows: level.rows, cols: level.cols);
     next = Piece(_draw());
+    linesCleared = startLines;
   }
 
   bool get isRunning => phase == GamePhase.playing;
@@ -290,19 +297,20 @@ class GameController extends ChangeNotifier {
 
     // Score the clear.
     const lineScores = [0, 100, 300, 600, 1000];
-    score += lineScores[min(full.length, 4)];
+    var gained = lineScores[min(full.length, 4)];
     if (combo > 0) {
-      score += combo * 50;
+      gained += combo * 50;
       _emit(GameEvent.combo);
     }
+    score += gained;
     combo++;
     maxCombo = max(maxCombo, combo);
     linesCleared += full.length;
     if (full.length >= 4) {
       feasts++;
-      _emit(GameEvent.feast, rows: full);
+      _emit(GameEvent.feast, rows: full, points: gained);
     } else {
-      _emit(GameEvent.clear, rows: full);
+      _emit(GameEvent.clear, rows: full, points: gained);
     }
 
     // Pause for the pop animation, then collapse and continue.

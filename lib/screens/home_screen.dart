@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets/bouncy_button.dart';
 import '../widgets/dumpling.dart';
 import '../widgets/steam_background.dart';
+import 'friends_screen.dart';
 import 'level_map_screen.dart';
 import 'sticker_book_screen.dart';
 
@@ -114,21 +115,47 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: DumplingTheme.display(size: 36)),
               ),
               const SizedBox(height: 18),
-              BouncyButton(
-                color: DumplingTheme.pink,
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => StickerBookScreen(store: store)),
-                ).then((_) => setState(() {})),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('📖', style: TextStyle(fontSize: 26)),
-                    const SizedBox(width: 10),
-                    Text('Sticker Book',
-                        style: DumplingTheme.display(size: 24)),
-                  ],
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  BouncyButton(
+                    color: DumplingTheme.pink,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 14),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => StickerBookScreen(store: store)),
+                    ).then((_) => setState(() {})),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('📖', style: TextStyle(fontSize: 22)),
+                        const SizedBox(width: 8),
+                        Text('Stickers',
+                            style: DumplingTheme.display(size: 22)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  BouncyButton(
+                    color: DumplingTheme.lilac,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 14),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const FriendsScreen()),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('🥟', style: TextStyle(fontSize: 22)),
+                        const SizedBox(width: 8),
+                        Text('Friends',
+                            style: DumplingTheme.display(size: 22)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               Row(

@@ -20,7 +20,8 @@ void main() {
     expect(find.text('Dumpling'), findsOneWidget);
     expect(find.text('DROP!'), findsOneWidget);
     expect(find.text('PLAY!'), findsOneWidget);
-    expect(find.text('Sticker Book'), findsOneWidget);
+    expect(find.text('Stickers'), findsOneWidget);
+    expect(find.text('Friends'), findsOneWidget);
   });
 
   testWidgets('play opens the level map with locked levels', (tester) async {
@@ -47,7 +48,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Sticker Book'), findsOneWidget);
-    expect(find.text('0 of 14 collected'), findsOneWidget);
+    expect(find.text('0 of 16 collected'), findsOneWidget);
     // Nothing is owned yet, so names are hidden.
     expect(find.text('???'), findsWidgets);
   });

@@ -16,6 +16,7 @@ import '../widgets/confetti.dart';
 import '../widgets/dumpling.dart';
 import '../widgets/stars_row.dart';
 import '../widgets/steam_background.dart';
+import '../widgets/sticker_art.dart';
 
 class GameScreen extends StatefulWidget {
   final LevelConfig level;
@@ -35,13 +36,23 @@ class _GameScreenState extends State<GameScreen>
   String? _banner;
   int _bannerId = 0;
   int _bestClearThisGame = 0;
+  int _startLines = 0;
   List<game_badges.Badge> _newBadges = [];
   bool _resultSaved = false;
 
   double _dragX = 0;
   double _dragY = 0;
 
-  static const _praise = ['Yum!', 'Tasty!', 'Great!', 'Wow!', 'So good!'];
+  static const _praise = [
+    'Yum!',
+    'Tasty!',
+    'Great!',
+    'Wow!',
+    'So good!',
+    'Delish!',
+    'Nice one!',
+    'Chef move!',
+  ];
 
   @override
   void initState() {
@@ -60,8 +71,9 @@ class _GameScreenState extends State<GameScreen>
     }
   }
 
-  void _newGame() {
-    _controller = GameController(level: widget.level)
+  void _newGame({int startLines = 0}) {
+    _startLines = startLines;
+    _controller = GameController(level: widget.level, startLines: startLines)
       ..addEventListener(_onGameEvent)
       ..addListener(_onStateChange);
     _banner = null;
@@ -101,9 +113,11 @@ class _GameScreenState extends State<GameScreen>
       await store.recordBestScore(widget.level.number, _controller.score);
     }
     await store.recordGame(
-      lines: _controller.linesCleared,
+      // A head-start run only banks the lines it really cleared.
+      lines: _controller.linesCleared - _startLines,
       feasts: _controller.feasts,
       maxCombo: _controller.maxCombo,
+      special: isSpecialLevel(widget.level.number),
     );
     final fresh = await store.grantNewBadges(store.statsSnapshot(
       gameLines: _controller.linesCleared,
@@ -116,7 +130,7 @@ class _GameScreenState extends State<GameScreen>
     if (mounted) setState(() => _newBadges = fresh);
   }
 
-  void _onGameEvent(GameEvent event, {List<int>? rows}) {
+  void _onGameEvent(GameEvent event, {List<int>? rows, int? points}) {
     switch (event) {
       case GameEvent.move:
         Sfx.instance.play(Sound.move);
@@ -130,9 +144,13 @@ class _GameScreenState extends State<GameScreen>
         Sfx.instance.play(Sound.squish);
         HapticFeedback.lightImpact();
       case GameEvent.clear:
-        Sfx.instance.play(Sound.pop);
+        // Combo pops climb in pitch: each clear in a row sounds higher.
+        Sfx.instance.play(Sound.pop,
+            pitch: min(1.6, 1.0 + (_controller.combo - 1) * 0.12));
         _bestClearThisGame = max(_bestClearThisGame, rows?.length ?? 1);
-        _showBanner(_praise[_random.nextInt(_praise.length)]);
+        _showBanner(_controller.combo >= 2
+            ? 'Combo x${_controller.combo}!'
+            : _praise[_random.nextInt(_praise.length)]);
       case GameEvent.feast:
         Sfx.instance.play(Sound.feast);
         HapticFeedback.mediumImpact();
@@ -156,11 +174,19 @@ class _GameScreenState extends State<GameScreen>
     });
   }
 
-  void _restart() {
+  void _restart({int startLines = 0}) {
     _controller.removeListener(_onStateChange);
     _controller.dispose();
-    setState(_newGame);
+    setState(() => _newGame(startLines: startLines));
   }
+
+  /// Long levels offer a head start after a loss: half the cleared
+  /// lines carry over, so a near miss at line 28 of 30 does not mean
+  /// starting from zero.
+  bool get _mercyOffered =>
+      !widget.level.endless &&
+      widget.level.goalLines >= 20 &&
+      _controller.linesCleared >= 8;
 
   // ---- Gestures on the board ----
 
@@ -429,8 +455,7 @@ class _GameScreenState extends State<GameScreen>
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(badge.emoji,
-                          style: const TextStyle(fontSize: 34)),
+                      StickerArt(badgeId: badge.id, size: 44),
                       Text(badge.name,
                           style: DumplingTheme.body(size: 14)),
                     ],
@@ -680,6 +705,24 @@ class _GameScreenState extends State<GameScreen>
       ),
       ..._newBadgeCards(),
       const SizedBox(height: 18),
+      if (_mercyOffered) ...[
+        BouncyButton(
+          color: DumplingTheme.lemon,
+          onPressed: () =>
+              _restart(startLines: _controller.linesCleared ~/ 2),
+          child: Column(
+            children: [
+              Text('Head Start!', style: DumplingTheme.display(size: 24)),
+              Text(
+                'Keep ${_controller.linesCleared ~/ 2} lines',
+                style: DumplingTheme.body(
+                    size: 15, color: DumplingTheme.inkSoft),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
       BouncyButton(
         color: DumplingTheme.mint,
         onPressed: _restart,

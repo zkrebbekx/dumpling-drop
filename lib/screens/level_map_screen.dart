@@ -69,8 +69,9 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 30),
                   children: [
+                    _SpecialCard(store: store, onPlay: _play),
                     Padding(
-                      padding: const EdgeInsets.only(top: 4, bottom: 10),
+                      padding: const EdgeInsets.only(top: 16, bottom: 10),
                       child: Row(
                         children: [
                           const Text('🍱', style: TextStyle(fontSize: 26)),
@@ -141,6 +142,76 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A featured card for the daily challenge. Fresh every day, seeded
+/// from the date, no network needed.
+class _SpecialCard extends StatelessWidget {
+  final ProgressStore store;
+  final Future<void> Function(LevelConfig) onPlay;
+
+  const _SpecialCard({required this.store, required this.onPlay});
+
+  @override
+  Widget build(BuildContext context) {
+    final special = todaysSpecial(DateTime.now());
+    final unlocked = store.starsFor(1) > 0;
+    final stars = store.starsFor(special.number);
+    final content = Row(
+      children: [
+        const Text('☀️', style: TextStyle(fontSize: 34)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Today's Special",
+                  style: DumplingTheme.display(size: 22)),
+              Text(
+                unlocked
+                    ? 'Clear ${special.goalLines} lines · '
+                        '${special.cols} wide · new every day!'
+                    : 'Win Level 1 to unlock',
+                style: DumplingTheme.body(
+                    size: 14, color: DumplingTheme.inkSoft),
+              ),
+            ],
+          ),
+        ),
+        if (unlocked && stars > 0)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < stars; i++)
+                const Icon(Icons.star_rounded,
+                    size: 20, color: DumplingTheme.star),
+            ],
+          )
+        else if (!unlocked)
+          Icon(Icons.lock_rounded,
+              size: 28, color: DumplingTheme.ink.withValues(alpha: 0.3)),
+      ],
+    );
+
+    if (!unlocked) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: DumplingTheme.creamDark,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+              color: DumplingTheme.ink.withValues(alpha: 0.1), width: 3),
+        ),
+        child: content,
+      );
+    }
+    return BouncyButton(
+      color: DumplingTheme.star,
+      padding: const EdgeInsets.all(14),
+      onPressed: () => onPlay(special),
+      child: content,
     );
   }
 }

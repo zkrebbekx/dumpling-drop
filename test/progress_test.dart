@@ -114,4 +114,46 @@ void main() {
       }
     });
   });
+
+  group("Today's Special", () {
+    test('is deterministic for a given day', () {
+      final date = DateTime(2026, 9, 6, 14, 30);
+      final a = todaysSpecial(date);
+      final b = todaysSpecial(DateTime(2026, 9, 6, 8, 0));
+      expect(a.number, b.number);
+      expect(a.cols, b.cols);
+      expect(a.goalLines, b.goalLines);
+      expect(a.gravity, b.gravity);
+      expect(isSpecialLevel(a.number), isTrue);
+      expect(isSpecialLevel(1), isFalse);
+    });
+
+    test('changes from one day to the next', () {
+      final today = todaysSpecial(DateTime(2026, 9, 6));
+      final tomorrow = todaysSpecial(DateTime(2026, 9, 7));
+      expect(today.number, isNot(tomorrow.number));
+    });
+
+    test('stays inside sane bounds across a year', () {
+      for (var i = 0; i < 366; i++) {
+        final special =
+            todaysSpecial(DateTime(2026, 1, 1).add(Duration(days: i)));
+        expect(special.cols, inInclusiveRange(8, 10));
+        expect(special.goalLines, inInclusiveRange(6, 14));
+        expect(special.gravity.inMilliseconds, inInclusiveRange(500, 819));
+        expect(special.pieceKinds, isNotEmpty);
+      }
+    });
+
+    test('playing specials counts toward the special badges', () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = ProgressStore(await SharedPreferences.getInstance());
+      await store.recordGame(
+          lines: 3, feasts: 0, maxCombo: 1, special: true);
+      expect(store.specialsPlayed, 1);
+      final earned = earnedBadges(store.statsSnapshot());
+      expect(earned, contains('special'));
+      expect(earned, isNot(contains('special5')));
+    });
+  });
 }

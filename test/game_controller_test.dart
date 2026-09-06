@@ -57,7 +57,7 @@ void main() {
     fakeAsync((async) {
       final game = GameController(level: testLevel(), seed: 1);
       final events = <GameEvent>[];
-      game.addEventListener((e, {rows}) => events.add(e));
+      game.addEventListener((e, {rows, points}) => events.add(e));
       game.start();
 
       // First bao: push to the left wall and drop.
@@ -271,6 +271,55 @@ void main() {
       game.linesCleared = 12;
       expect(game.currentGravity.inMilliseconds, lessThan(600));
       expect(level.endless, isFalse);
+      game.dispose();
+    });
+  });
+  test('a head start credits lines toward the goal', () {
+    fakeAsync((async) {
+      final game = GameController(
+        level: testLevel(goalLines: 4),
+        seed: 1,
+        startLines: 2,
+      );
+      game.start();
+      expect(game.linesCleared, 2);
+      expect(game.goalProgress, 0.5);
+      // Two more cleared lines finish the level.
+      while (game.board.canPlace(
+          game.current!, game.pieceRow, game.pieceCol - 1, game.rotation)) {
+        game.moveLeft();
+      }
+      game.hardDrop();
+      while (game.board.canPlace(
+          game.current!, game.pieceRow, game.pieceCol + 1, game.rotation)) {
+        game.moveRight();
+      }
+      game.hardDrop();
+      async.elapse(const Duration(milliseconds: 500));
+      expect(game.phase, GamePhase.won);
+      game.dispose();
+    });
+  });
+
+  test('clear events carry the points gained', () {
+    fakeAsync((async) {
+      final game = GameController(level: testLevel(goalLines: 99), seed: 1);
+      int? gained;
+      game.addEventListener((e, {rows, points}) {
+        if (e == GameEvent.clear) gained = points;
+      });
+      game.start();
+      while (game.board.canPlace(
+          game.current!, game.pieceRow, game.pieceCol - 1, game.rotation)) {
+        game.moveLeft();
+      }
+      game.hardDrop();
+      while (game.board.canPlace(
+          game.current!, game.pieceRow, game.pieceCol + 1, game.rotation)) {
+        game.moveRight();
+      }
+      game.hardDrop();
+      expect(gained, 300); // a double
       game.dispose();
     });
   });

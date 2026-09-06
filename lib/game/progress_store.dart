@@ -58,15 +58,20 @@ class ProgressStore {
   int get totalGames => _prefs.getInt('total.games') ?? 0;
   int get totalFeasts => _prefs.getInt('total.feasts') ?? 0;
   int get bestCombo => _prefs.getInt('total.bestCombo') ?? 0;
+  int get specialsPlayed => _prefs.getInt('total.specials') ?? 0;
 
   Future<void> recordGame({
     required int lines,
     required int feasts,
     required int maxCombo,
+    bool special = false,
   }) async {
     await _prefs.setInt('total.lines', totalLines + lines);
     await _prefs.setInt('total.games', totalGames + 1);
     await _prefs.setInt('total.feasts', totalFeasts + feasts);
+    if (special) {
+      await _prefs.setInt('total.specials', specialsPlayed + 1);
+    }
     if (maxCombo > bestCombo) {
       await _prefs.setInt('total.bestCombo', maxCombo);
     }
@@ -119,6 +124,7 @@ class ProgressStore {
       totalGames: totalGames,
       totalFeasts: totalFeasts,
       bestCombo: bestCombo,
+      specialsPlayed: specialsPlayed,
       gameLines: gameLines,
       gameBestClear: gameBestClear,
       gameScore: gameScore,

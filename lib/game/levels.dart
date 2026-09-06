@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'piece.dart';
 
 enum Difficulty {
@@ -107,6 +109,40 @@ LevelConfig _level(
     threeStarScore: goalLines * 180,
   );
 }
+
+/// The number of whole days since the epoch, in local time.
+int dayNumber(DateTime date) =>
+    DateTime(date.year, date.month, date.day)
+        .difference(DateTime(1970))
+        .inDays;
+
+/// Today's Special: one fresh challenge per day, seeded from the
+/// date, so it works fully offline and every device cooks the same
+/// dish on the same day.
+LevelConfig todaysSpecial(DateTime date) {
+  final day = dayNumber(date);
+  final r = Random(day * 7919 + 17);
+  final cols = 8 + r.nextInt(3);
+  final goal = 6 + r.nextInt(9); // 6..14 lines
+  final gravityMs = 500 + r.nextInt(320); // 500..819 ms
+  final friendlyDay = r.nextBool();
+  return LevelConfig(
+    // A unique number per day keeps each day's best score separate.
+    number: 200000 + day,
+    name: "Today's Special",
+    difficulty: gravityMs > 660 ? Difficulty.easy : Difficulty.medium,
+    rows: 14,
+    cols: cols,
+    gravity: Duration(milliseconds: gravityMs),
+    goalLines: goal,
+    pieceKinds: friendlyDay ? _friendly : _all,
+    twoStarScore: goal * 130,
+    threeStarScore: goal * 180,
+  );
+}
+
+/// True for the level numbers minted by [todaysSpecial].
+bool isSpecialLevel(int number) => number >= 200000;
 
 /// Endless baskets. Each one unlocks when its difficulty is beaten.
 final List<LevelConfig> freePlayLevels = [

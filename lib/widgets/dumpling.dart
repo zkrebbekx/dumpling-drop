@@ -13,6 +13,10 @@ Color shade(Color color, double amount) {
 ///
 /// [squish] 0..1 flattens the dumpling, for landing wobbles.
 /// [eyeOpen] 0..1 closes the eyes, for blinking.
+/// [eyeShift] moves the pupils, as a fraction of the body size, so a
+/// falling dumpling can watch where it lands.
+/// [lean] tilts the dumpling (radians) around its bottom center, for
+/// a jelly wobble while moving sideways.
 void paintDumpling(
   Canvas canvas,
   Rect rect,
@@ -21,8 +25,18 @@ void paintDumpling(
   bool face = true,
   double eyeOpen = 1,
   double alpha = 1,
+  Offset eyeShift = Offset.zero,
+  double lean = 0,
 }) {
   canvas.save();
+
+  if (lean != 0) {
+    final cx = rect.center.dx;
+    final bottom = rect.bottom;
+    canvas.translate(cx, bottom);
+    canvas.rotate(lean);
+    canvas.translate(-cx, -bottom);
+  }
 
   // Squish: press down toward the bottom of the cell.
   if (squish > 0) {
@@ -89,15 +103,18 @@ void paintDumpling(
 
   if (face) {
     final faceColor = const Color(0xFF5B4636).withValues(alpha: 0.85 * alpha);
-    final eyeY = body.center.dy + body.height * 0.05;
+    final eyeY = body.center.dy +
+        body.height * 0.05 +
+        eyeShift.dy * body.height;
     final eyeDx = body.width * 0.18;
     final eyeR = max(1.2, body.width * 0.055);
+    final cxShifted = cx + eyeShift.dx * body.width;
 
     if (eyeOpen > 0.3) {
-      canvas.drawCircle(
-          Offset(cx - eyeDx, eyeY), eyeR, Paint()..color = faceColor);
-      canvas.drawCircle(
-          Offset(cx + eyeDx, eyeY), eyeR, Paint()..color = faceColor);
+      canvas.drawCircle(Offset(cxShifted - eyeDx, eyeY), eyeR,
+          Paint()..color = faceColor);
+      canvas.drawCircle(Offset(cxShifted + eyeDx, eyeY), eyeR,
+          Paint()..color = faceColor);
     } else {
       // Happy closed eyes.
       final closed = Paint()

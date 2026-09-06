@@ -47,13 +47,16 @@ class Sfx {
     }
   }
 
-  void play(Sound sound) {
+  /// Plays a sound. [pitch] above 1.0 plays it faster and higher —
+  /// combo pops climb in pitch, which kids find very satisfying.
+  void play(Sound sound, {double pitch = 1.0}) {
     if (!enabled || _pool.isEmpty) return;
     final player = _pool[_next];
     _next = (_next + 1) % _pool.length;
     // Fire and forget; a missed sound must not disturb play.
     player
         .stop()
+        .then((_) => player.setPlaybackRate(pitch.clamp(0.5, 2.0)))
         .then((_) =>
             player.play(AssetSource('audio/${sound.file}.wav'), volume: 0.9))
         .catchError((_) {});

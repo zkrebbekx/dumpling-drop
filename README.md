@@ -8,15 +8,25 @@ row to make the dumplings pop. Clear the goal to win the level.
 
 ## Features
 
-- **15 levels** across three difficulties: Steamed, Pan-Fried, and Spicy.
-- **Star ratings**: each level awards 1 to 3 stars based on the score.
-- **Sticker Book**: 14 collectible award stickers.
-- **Kid-first design**: big buttons, a ghost landing guide, gentle
-  wall kicks, a lock-delay grace period, and no harsh fail states.
-- **Squishy feel**: squish animations, blink cycles, pop particles,
-  steam, confetti, and a screen wiggle on a four-line "Dumpling Feast".
-- **Original sound**: every sound effect is synthesized by
-  `tool/gen_sounds.dart`. The game ships with zero licensed audio.
+- **15 levels** across three difficulties: Steamed, Pan-Fried, and
+  Spicy, plus three **endless Free Play** baskets.
+- **Today's Special**: one fresh challenge per day, seeded from the
+  date, so it needs no server.
+- **Star ratings**: each level awards 1 to 3 stars based on the score,
+  with visible score targets.
+- **Sticker Book**: 16 collectible award stickers with hand-painted
+  medallion art.
+- **Meet the Dumplings**: a character page for the seven pieces.
+- **Kid-first design**: big hold-to-repeat buttons, a ghost landing
+  guide, gentle wall kicks, a lock-delay grace period, gesture hints,
+  a head-start retry on long levels, and no harsh fail states.
+- **Squishy feel**: squish animations, blink cycles, lean-while-moving,
+  eyes that watch the landing spot, pop particles, floating score
+  text, rising combo pitch, haptics, steam, confetti, and a screen
+  wiggle on a four-line "Dumpling Feast".
+- **Original sound**: every sound effect and the music loop are
+  synthesized by `tool/gen_sounds.dart`. The game ships with zero
+  licensed audio.
 - **Fully offline**: no server, no accounts, no ads, no tracking.
   Progress is stored only on the device.
 

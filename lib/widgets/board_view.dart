@@ -36,10 +36,19 @@ class BoardView extends StatefulWidget {
   State<BoardView> createState() => BoardViewState();
 }
 
+class _FloatText {
+  final String text;
+  final Offset origin;
+  double age = 0;
+
+  _FloatText(this.text, this.origin);
+}
+
 class BoardViewState extends State<BoardView>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ticker;
   final List<_Particle> _particles = [];
+  final List<_FloatText> _floaters = [];
   final _random = Random();
 
   Duration _lastTick = Duration.zero;
@@ -50,6 +59,8 @@ class BoardViewState extends State<BoardView>
   List<int> _clearRows = const [];
   double _lockPulse = -10;
   double _shakeStart = -10;
+  double _leanTime = -10;
+  int _leanDir = 0;
 
   Size _cellSizeFor(Size size) {
     final cols = widget.controller.level.cols;
@@ -104,6 +115,10 @@ class BoardViewState extends State<BoardView>
       p.life -= dt;
     }
     _particles.removeWhere((p) => p.life <= 0);
+    for (final f in _floaters) {
+      f.age += dt;
+    }
+    _floaters.removeWhere((f) => f.age > 1.0);
 
     // Repaint only while something moves. Idle overlays (ready,
     // paused, results) must not burn a full-board paint per frame.
@@ -111,30 +126,55 @@ class BoardViewState extends State<BoardView>
     final animating = phase == GamePhase.playing ||
         phase == GamePhase.clearing ||
         _particles.isNotEmpty ||
+        _floaters.isNotEmpty ||
         (_time - _lockPulse) < 0.3 ||
         (_time - _shakeStart) < 0.5;
     if (animating) setState(() {});
   }
 
-  void _onGameEvent(GameEvent event, {List<int>? rows}) {
+  void _onGameEvent(GameEvent event, {List<int>? rows, int? points}) {
     if (!mounted) return;
     switch (event) {
       case GameEvent.lock:
         _lockPulse = _time;
+      case GameEvent.move:
+        // Which way did the piece go? Peek at the drag direction via
+        // a tiny lean impulse; direction comes from column deltas.
+        _leanTime = _time;
+        _leanDir = widget.controller.pieceCol >= _lastCol ? 1 : -1;
+        _lastCol = widget.controller.pieceCol;
       case GameEvent.clear:
         _clearStart = _time;
         _clearRows = rows ?? const [];
         _spawnRowParticles(rows ?? const [], sparkles: 4);
+        _spawnFloater(rows, points);
       case GameEvent.feast:
         _clearStart = _time;
         _clearRows = rows ?? const [];
         _shakeStart = _time;
         _spawnRowParticles(rows ?? const [], sparkles: 14);
+        _spawnFloater(rows, points);
       case GameEvent.hardDrop:
         _lockPulse = _time;
       default:
         break;
     }
+  }
+
+  int _lastCol = 0;
+
+  void _spawnFloater(List<int>? rows, int? points) {
+    if (points == null || rows == null || rows.isEmpty) return;
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final size = box.size;
+    final cell = _cellSizeFor(size).width;
+    final cols = widget.controller.level.cols;
+    final left = (size.width - cell * cols) / 2;
+    _floaters.add(_FloatText(
+      '+$points',
+      Offset(left + cell * cols / 2, rows.first * cell),
+    ));
   }
 
   void _spawnRowParticles(List<int> rows, {int sparkles = 0}) {
@@ -194,11 +234,14 @@ class BoardViewState extends State<BoardView>
       painter: _BoardPainter(
         controller: widget.controller,
         particles: _particles,
+        floaters: _floaters,
         time: _time,
         clearStart: _clearStart,
         clearRows: _clearRows,
         lockPulse: _lockPulse,
         shakeStart: _shakeStart,
+        leanTime: _leanTime,
+        leanDir: _leanDir,
       ),
       child: const SizedBox.expand(),
     );
@@ -208,20 +251,26 @@ class BoardViewState extends State<BoardView>
 class _BoardPainter extends CustomPainter {
   final GameController controller;
   final List<_Particle> particles;
+  final List<_FloatText> floaters;
   final double time;
   final double clearStart;
   final List<int> clearRows;
   final double lockPulse;
   final double shakeStart;
+  final double leanTime;
+  final int leanDir;
 
   _BoardPainter({
     required this.controller,
     required this.particles,
+    required this.floaters,
     required this.time,
     required this.clearStart,
     required this.clearRows,
     required this.lockPulse,
     required this.shakeStart,
+    required this.leanTime,
+    required this.leanDir,
   });
 
   static const _clearSeconds = 0.42;
@@ -342,11 +391,17 @@ class _BoardPainter extends CustomPainter {
         }
       }
 
-      // The falling piece, with a gentle wobble and a squish when it
-      // rests on the stack.
+      // The falling piece: a gentle wobble, a squish when it rests on
+      // the stack, a lean while moving, and eyes that watch the drop.
       final grounded = ghostRow == controller.pieceRow;
       final wobble = sin(time * 6) * 0.03;
       final squish = grounded ? 0.35 : wobble.abs();
+      final leanAge = time - leanTime;
+      final lean = leanAge < 0.18
+          ? leanDir * 0.14 * (1 - leanAge / 0.18)
+          : 0.0;
+      final eyeShift =
+          grounded ? Offset.zero : const Offset(0, 0.055);
       for (final pc in piece.cells(controller.rotation)) {
         final r = controller.pieceRow + pc.row;
         final c = controller.pieceCol + pc.col;
@@ -356,11 +411,44 @@ class _BoardPainter extends CustomPainter {
           cellRect(r, c),
           piece.color(DumplingTheme.fillings),
           squish: squish,
+          lean: lean,
+          eyeShift: eyeShift,
         );
       }
     }
 
     canvas.restore();
+
+    // Score floaters drift up and fade.
+    for (final f in floaters) {
+      final fade = f.age < 0.75 ? 1.0 : (1 - f.age) / 0.25;
+      final scale = f.age < 0.15 ? 0.6 + f.age / 0.15 * 0.4 : 1.0;
+      final painter = TextPainter(
+        text: TextSpan(
+          text: f.text,
+          style: TextStyle(
+            fontFamily: 'Baloo',
+            fontSize: cell * 0.62 * scale,
+            fontVariations: const [FontVariation('wght', 800)],
+            color: DumplingTheme.ink
+                .withValues(alpha: fade.clamp(0.0, 1.0)),
+            shadows: [
+              Shadow(
+                color: Colors.white
+                    .withValues(alpha: 0.9 * fade.clamp(0.0, 1.0)),
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      painter.paint(
+        canvas,
+        f.origin -
+            Offset(painter.width / 2, f.age * cell * 1.6 + painter.height),
+      );
+    }
 
     // Particles fly above everything, outside the clip.
     for (final p in particles) {

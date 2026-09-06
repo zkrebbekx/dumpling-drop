@@ -15,6 +15,7 @@ class BadgeStats {
   final int totalGames;
   final int totalFeasts;
   final int bestCombo;
+  final int specialsPlayed;
 
   // Latest finished game.
   final int gameLines;
@@ -32,6 +33,7 @@ class BadgeStats {
     this.totalGames = 0,
     this.totalFeasts = 0,
     this.bestCombo = 0,
+    this.specialsPlayed = 0,
     this.gameLines = 0,
     this.gameBestClear = 0,
     this.gameScore = 0,
@@ -53,6 +55,8 @@ const allBadges = <Badge>[
   Badge('lines200', 'Sous Chef', '⭐', 'Clear 200 lines in total'),
   Badge('games10', 'Hungry Ten', '🐼', 'Play 10 games'),
   Badge('star3', 'Star Chef', '🌟', 'Earn 3 stars on a level'),
+  Badge('special', 'Daily Taster', '📅', "Play a Today's Special"),
+  Badge('special5', 'Regular', '🍽️', "Play 5 Today's Specials"),
   Badge('steam_champ', 'Steam Champion', '☁️', 'Finish all Steamed levels'),
   Badge('pan_master', 'Pan Master', '🍳', 'Finish all Pan-Fried levels'),
   Badge('spice_legend', 'Spice Legend', '🌶️', 'Finish all Spicy levels'),
@@ -76,6 +80,8 @@ Set<String> earnedBadges(BadgeStats s) {
   grant('lines200', s.totalLines >= 200);
   grant('games10', s.totalGames >= 10);
   grant('star3', s.threeStarLevels >= 1);
+  grant('special', s.specialsPlayed >= 1);
+  grant('special5', s.specialsPlayed >= 5);
   grant('steam_champ', s.easyLevelsWon >= 5);
   grant('pan_master', s.mediumLevelsWon >= 5);
   grant('spice_legend', s.hardLevelsWon >= 5);
