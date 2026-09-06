@@ -42,8 +42,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       final next = !store.soundOn;
                       await store.setSoundOn(next);
                       Sfx.instance.setEnabled(next);
-                      if (next) Sfx.instance.play(Sound.click);
-                      setState(() {});
+                      if (next) {
+                        Sfx.instance.play(Sound.click);
+                        await Sfx.instance.startMusic();
+                      }
+                      if (mounted) setState(() {});
                     },
                   ),
                 ),

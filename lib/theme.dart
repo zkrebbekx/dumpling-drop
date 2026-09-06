@@ -12,13 +12,14 @@ abstract final class DumplingTheme {
   static const bambooDark = Color(0xFFB9854A);
   static const boardWell = Color(0xFFFBEFD9);
 
-  // Ink for text.
+  // Ink for text. inkSoft keeps at least 4.5:1 contrast on cream.
   static const ink = Color(0xFF5B4636);
-  static const inkSoft = Color(0xFF8A715C);
+  static const inkSoft = Color(0xFF7A6350);
 
   // Accents.
   static const peach = Color(0xFFFFB48A);
   static const mint = Color(0xFFA8E6CF);
+  static const mintDark = Color(0xFF4CAF8B);
   static const sky = Color(0xFF9ED4F5);
   static const lemon = Color(0xFFFFE49C);
   static const pink = Color(0xFFFFC2D4);

@@ -26,7 +26,8 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen>
+    with WidgetsBindingObserver {
   late GameController _controller;
   final _random = Random();
 
@@ -44,7 +45,18 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _newGame();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // A child switching apps or locking the screen must not lose the
+    // game to gravity ticking in the background.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _controller.pause();
+    }
   }
 
   void _newGame() {
@@ -59,6 +71,7 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
   }
@@ -546,7 +559,7 @@ class _GoalBar extends StatelessWidget {
                   widthFactor: progress.clamp(0.02, 1.0),
                   heightFactor: 1,
                   alignment: Alignment.centerLeft,
-                  child: Container(color: DumplingTheme.mint),
+                  child: Container(color: DumplingTheme.mintDark),
                 ),
               ],
             ),

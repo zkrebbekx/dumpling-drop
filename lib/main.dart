@@ -14,13 +14,43 @@ Future<void> main() async {
   final store = await ProgressStore.open();
   Sfx.instance.enabled = store.soundOn;
   await Sfx.instance.init();
+  await Sfx.instance.startMusic();
   runApp(DumplingDropApp(store: store));
 }
 
-class DumplingDropApp extends StatelessWidget {
+class DumplingDropApp extends StatefulWidget {
   final ProgressStore store;
 
   const DumplingDropApp({super.key, required this.store});
+
+  @override
+  State<DumplingDropApp> createState() => _DumplingDropAppState();
+}
+
+class _DumplingDropAppState extends State<DumplingDropApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Silence the music when the app leaves the foreground.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      Sfx.instance.stopMusic();
+    } else if (state == AppLifecycleState.resumed) {
+      Sfx.instance.startMusic();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +58,7 @@ class DumplingDropApp extends StatelessWidget {
       title: 'Dumpling Drop',
       debugShowCheckedModeBanner: false,
       theme: DumplingTheme.themeData(),
-      home: HomeScreen(store: store),
+      home: HomeScreen(store: widget.store),
     );
   }
 }
