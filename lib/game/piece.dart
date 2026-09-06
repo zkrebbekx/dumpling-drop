@@ -105,4 +105,12 @@ class Piece {
         cs.map((c) => c.col).reduce(min) +
         1;
   }
+
+  /// Smallest column offset inside the bounding box at [rotation].
+  int minCol(int rotation) =>
+      cells(rotation).map((c) => c.col).reduce(min);
+
+  /// Largest row offset inside the bounding box at [rotation].
+  int maxRow(int rotation) =>
+      cells(rotation).map((c) => c.row).reduce(max);
 }

@@ -52,6 +52,7 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
                   children: [
                     BouncyIconButton(
                       icon: Icons.arrow_back_rounded,
+                      label: 'Back',
                       color: DumplingTheme.lemon,
                       size: 52,
                       onPressed: () => Navigator.of(context).pop(),
@@ -68,6 +69,40 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 30),
                   children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, bottom: 10),
+                      child: Row(
+                        children: [
+                          const Text('🍱', style: TextStyle(fontSize: 26)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Free Play',
+                            style: DumplingTheme.display(
+                                size: 26, color: DumplingTheme.inkSoft),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Wrap(
+                      spacing: 14,
+                      runSpacing: 14,
+                      children: [
+                        for (var i = 0; i < freePlayLevels.length; i++)
+                          _LevelNode(
+                            level: freePlayLevels[i],
+                            stars: 0,
+                            best: store
+                                .bestScoreFor(freePlayLevels[i].number),
+                            // Each basket opens when its difficulty
+                            // tier is beaten: levels 5, 10, 15.
+                            unlocked:
+                                store.starsFor((i + 1) * 5) > 0,
+                            color: _difficultyColors[
+                                freePlayLevels[i].difficulty]!,
+                            onTap: () => _play(freePlayLevels[i]),
+                          ),
+                      ],
+                    ),
                     for (final entry in byDifficulty.entries) ...[
                       Padding(
                         padding: const EdgeInsets.only(top: 16, bottom: 10),
@@ -117,27 +152,35 @@ class _LevelNode extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
+  /// Free-play baskets show a best score instead of stars.
+  final int? best;
+
   const _LevelNode({
     required this.level,
     required this.stars,
     required this.unlocked,
     required this.color,
     required this.onTap,
+    this.best,
   });
 
   @override
   Widget build(BuildContext context) {
+    final endless = level.endless;
     final content = SizedBox(
       width: 96,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          unlocked
-              ? Text('${level.number}',
-                  style: DumplingTheme.display(size: 34))
-              : Icon(Icons.lock_rounded,
+          !unlocked
+              ? Icon(Icons.lock_rounded,
                   size: 34,
-                  color: DumplingTheme.ink.withValues(alpha: 0.3)),
+                  color: DumplingTheme.ink.withValues(alpha: 0.3))
+              : endless
+                  ? Text(level.difficulty.emoji,
+                      style: const TextStyle(fontSize: 30))
+                  : Text('${level.number}',
+                      style: DumplingTheme.display(size: 34)),
           Text(
             level.name,
             maxLines: 1,
@@ -150,19 +193,30 @@ class _LevelNode extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 0; i < 3; i++)
-                Icon(
-                  Icons.star_rounded,
-                  size: 18,
-                  color: i < stars
-                      ? DumplingTheme.star
-                      : DumplingTheme.ink.withValues(alpha: 0.15),
-                ),
-            ],
-          ),
+          if (endless)
+            Text(
+              best != null && best! > 0 ? 'Best $best' : 'Endless!',
+              style: DumplingTheme.body(
+                size: 13,
+                color: unlocked
+                    ? DumplingTheme.ink
+                    : DumplingTheme.ink.withValues(alpha: 0.35),
+              ),
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < 3; i++)
+                  Icon(
+                    Icons.star_rounded,
+                    size: 18,
+                    color: i < stars
+                        ? DumplingTheme.star
+                        : DumplingTheme.ink.withValues(alpha: 0.15),
+                  ),
+              ],
+            ),
         ],
       ),
     );

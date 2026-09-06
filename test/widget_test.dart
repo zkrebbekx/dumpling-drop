@@ -35,8 +35,9 @@ void main() {
     expect(find.byType(LevelMapScreen), findsOneWidget);
     expect(find.text('Pick a Basket!'), findsOneWidget);
     expect(find.text('First Bite'), findsOneWidget);
-    // Levels 2..15 are locked at the start.
-    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(14));
+    // Levels 2+ and the free-play baskets start locked. The lazy list
+    // only builds what fits the viewport, so assert a floor.
+    expect(find.byIcon(Icons.lock_rounded), findsAtLeastNWidgets(8));
   });
 
   testWidgets('sticker book lists every badge slot', (tester) async {

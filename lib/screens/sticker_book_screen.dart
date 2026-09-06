@@ -26,6 +26,7 @@ class StickerBookScreen extends StatelessWidget {
                   children: [
                     BouncyIconButton(
                       icon: Icons.arrow_back_rounded,
+                      label: 'Back',
                       color: DumplingTheme.lemon,
                       size: 52,
                       onPressed: () => Navigator.of(context).pop(),

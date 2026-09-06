@@ -42,6 +42,11 @@ class ProgressStore {
     if (stars > starsFor(levelNumber)) {
       await _prefs.setInt('stars.$levelNumber', stars);
     }
+    await recordBestScore(levelNumber, score);
+  }
+
+  /// Keeps the best score for any level, including endless baskets.
+  Future<void> recordBestScore(int levelNumber, int score) async {
     if (score > bestScoreFor(levelNumber)) {
       await _prefs.setInt('best.$levelNumber', score);
     }

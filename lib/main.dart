@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -14,7 +16,10 @@ Future<void> main() async {
   final store = await ProgressStore.open();
   Sfx.instance.enabled = store.soundOn;
   await Sfx.instance.init();
-  await Sfx.instance.startMusic();
+  // Never await playback before the first frame: a blocked audio
+  // start (web autoplay policy, slow codec init) must not hold the
+  // whole app on a blank screen.
+  unawaited(Sfx.instance.startMusic());
   runApp(DumplingDropApp(store: store));
 }
 

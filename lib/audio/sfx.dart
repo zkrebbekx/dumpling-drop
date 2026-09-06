@@ -52,15 +52,20 @@ class Sfx {
     final player = _pool[_next];
     _next = (_next + 1) % _pool.length;
     // Fire and forget; a missed sound must not disturb play.
-    player.stop().then((_) {
-      player.play(AssetSource('audio/${sound.file}.wav'), volume: 0.9);
-    }).catchError((_) {});
+    player
+        .stop()
+        .then((_) =>
+            player.play(AssetSource('audio/${sound.file}.wav'), volume: 0.9))
+        .catchError((_) {});
   }
 
   Future<void> startMusic() async {
     if (!enabled) return;
     try {
       final player = _music ??= AudioPlayer();
+      // Already playing (for example resume after the notification
+      // shade): do not restart the loop from zero.
+      if (player.state == PlayerState.playing) return;
       await player.setReleaseMode(ReleaseMode.loop);
       await player.play(AssetSource('audio/bgm.wav'), volume: 0.35);
     } catch (e) {

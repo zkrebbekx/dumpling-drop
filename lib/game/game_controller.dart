@@ -112,7 +112,26 @@ class GameController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _spawnOnResume = false;
+
   void pause() {
+    if (phase == GamePhase.clearing) {
+      // Finish the collapse now. Otherwise the clear timer fires
+      // while the app is in the background and gravity plays on with
+      // nobody watching.
+      _clearTimer?.cancel();
+      board.removeRows(clearingRows);
+      clearingRows = const [];
+      if (!level.endless && linesCleared >= level.goalLines) {
+        _finish(GamePhase.won);
+        return;
+      }
+      _spawnOnResume = true;
+      phase = GamePhase.paused;
+      _stopTimers();
+      notifyListeners();
+      return;
+    }
     if (phase != GamePhase.playing) return;
     phase = GamePhase.paused;
     _stopTimers();
@@ -122,6 +141,11 @@ class GameController extends ChangeNotifier {
   void resume() {
     if (phase != GamePhase.paused) return;
     phase = GamePhase.playing;
+    if (_spawnOnResume) {
+      _spawnOnResume = false;
+      _spawn();
+      if (phase != GamePhase.playing) return;
+    }
     _startGravity();
     notifyListeners();
   }
@@ -181,9 +205,18 @@ class GameController extends ChangeNotifier {
     _lockPiece();
   }
 
+  /// Gravity for the current moment. Endless play speeds up a little
+  /// every six lines, but never below 180 ms per row.
+  Duration get currentGravity {
+    if (!level.endless) return level.gravity;
+    final steps = linesCleared ~/ 6;
+    final ms = (level.gravity.inMilliseconds * pow(0.93, steps)).round();
+    return Duration(milliseconds: max(180, ms));
+  }
+
   void _startGravity() {
     _gravityTimer?.cancel();
-    _gravityTimer = Timer.periodic(level.gravity, (_) => _tick());
+    _gravityTimer = Timer.periodic(currentGravity, (_) => _tick());
   }
 
   void _stopTimers() {
@@ -197,7 +230,9 @@ class GameController extends ChangeNotifier {
     if (!isRunning || piece == null) return;
     if (board.canPlace(piece, pieceRow + 1, pieceCol, rotation)) {
       pieceRow++;
+      // Leaving the ground restores the full grace budget.
       _lockTimer?.cancel();
+      _lockResets = 0;
       notifyListeners();
     } else {
       _armLockTimer();
@@ -281,12 +316,14 @@ class GameController extends ChangeNotifier {
   void _finishClear() {
     board.removeRows(clearingRows);
     clearingRows = const [];
-    if (linesCleared >= level.goalLines) {
+    if (!level.endless && linesCleared >= level.goalLines) {
       _finish(GamePhase.won);
       return;
     }
     phase = GamePhase.playing;
     _spawn();
+    // _spawn can lose the game; do not rearm gravity on a dead board.
+    if (phase != GamePhase.playing) return;
     _startGravity();
     notifyListeners();
   }
@@ -296,10 +333,10 @@ class GameController extends ChangeNotifier {
     next = Piece(_draw());
     current = piece;
     rotation = 0;
-    pieceCol = (level.cols - piece.width(0)) ~/ 2 - 1;
-    // Nudge inside if the centering guess is off for narrow boards.
-    if (pieceCol < -1) pieceCol = -1;
-    pieceRow = -2;
+    // Center the visible cells, then shift so the bottom row of the
+    // piece starts at row 0 and the player sees it at once.
+    pieceCol = (level.cols - piece.width(0)) ~/ 2 - piece.minCol(0);
+    pieceRow = -piece.maxRow(0);
     if (!board.canPlace(piece, pieceRow, pieceCol, rotation)) {
       _finish(GamePhase.lost);
     }

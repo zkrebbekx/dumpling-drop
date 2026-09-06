@@ -185,4 +185,93 @@ void main() {
       game.dispose();
     });
   });
+
+  test('spawn centers the visible cells and starts on screen', () {
+    fakeAsync((async) {
+      for (final kind in PieceKind.values) {
+        final game = GameController(
+          level: testLevel(cols: 10, kinds: [kind]),
+          seed: 3,
+        );
+        game.start();
+        final piece = game.current!;
+        // The bottom of the piece must be visible at once.
+        final rows = piece
+            .cells(game.rotation)
+            .map((c) => game.pieceRow + c.row)
+            .toList();
+        expect(rows.reduce((a, b) => a > b ? a : b), 0,
+            reason: '$kind must spawn with its bottom row at 0');
+        // The visible cells must sit centered, within one column.
+        final cols = piece
+            .cells(game.rotation)
+            .map((c) => game.pieceCol + c.col)
+            .toList();
+        final minC = cols.reduce((a, b) => a < b ? a : b);
+        final maxC = cols.reduce((a, b) => a > b ? a : b);
+        final leftGap = minC;
+        final rightGap = 10 - 1 - maxC;
+        expect((leftGap - rightGap).abs(), lessThanOrEqualTo(1),
+            reason: '$kind must spawn centered');
+        game.dispose();
+      }
+    });
+  });
+
+  test('pause during a clear finishes the collapse and stays paused', () {
+    fakeAsync((async) {
+      final game = GameController(level: testLevel(goalLines: 99), seed: 1);
+      game.start();
+      while (game.board.canPlace(
+          game.current!, game.pieceRow, game.pieceCol - 1, game.rotation)) {
+        game.moveLeft();
+      }
+      game.hardDrop();
+      while (game.board.canPlace(
+          game.current!, game.pieceRow, game.pieceCol + 1, game.rotation)) {
+        game.moveRight();
+      }
+      game.hardDrop();
+      expect(game.phase, GamePhase.clearing);
+
+      game.pause(); // e.g. app went to the background
+      expect(game.phase, GamePhase.paused);
+      async.elapse(const Duration(seconds: 5));
+      // Nothing may move while paused.
+      expect(game.phase, GamePhase.paused);
+      expect(game.clearingRows, isEmpty);
+
+      game.resume();
+      expect(game.phase, GamePhase.playing);
+      expect(game.current, isNotNull);
+      expect(game.linesCleared, 2);
+      game.dispose();
+    });
+  });
+
+  test('endless mode never wins and gravity ramps up', () {
+    final level = testLevel(goalLines: 2);
+    final endless = LevelConfig(
+      number: 101,
+      name: 'Endless',
+      difficulty: Difficulty.easy,
+      rows: 8,
+      cols: 4,
+      gravity: const Duration(milliseconds: 600),
+      goalLines: 999,
+      pieceKinds: const [PieceKind.bao],
+      twoStarScore: 0,
+      threeStarScore: 0,
+      endless: true,
+    );
+    fakeAsync((async) {
+      final game = GameController(level: endless, seed: 1);
+      game.start();
+      expect(game.currentGravity, const Duration(milliseconds: 600));
+      game.linesCleared = 12;
+      expect(game.currentGravity.inMilliseconds, lessThan(600));
+      expect(level.endless, isFalse);
+      game.dispose();
+    });
+  });
 }

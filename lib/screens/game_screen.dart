@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../audio/sfx.dart';
 import '../game/badges.dart' as game_badges;
@@ -96,6 +97,8 @@ class _GameScreenState extends State<GameScreen>
         _controller.starsForScore(),
         _controller.score,
       );
+    } else if (widget.level.endless) {
+      await store.recordBestScore(widget.level.number, _controller.score);
     }
     await store.recordGame(
       lines: _controller.linesCleared,
@@ -125,18 +128,21 @@ class _GameScreenState extends State<GameScreen>
         Sfx.instance.play(Sound.drop);
       case GameEvent.lock:
         Sfx.instance.play(Sound.squish);
+        HapticFeedback.lightImpact();
       case GameEvent.clear:
         Sfx.instance.play(Sound.pop);
         _bestClearThisGame = max(_bestClearThisGame, rows?.length ?? 1);
         _showBanner(_praise[_random.nextInt(_praise.length)]);
       case GameEvent.feast:
         Sfx.instance.play(Sound.feast);
+        HapticFeedback.mediumImpact();
         _bestClearThisGame = max(_bestClearThisGame, rows?.length ?? 4);
         _showBanner('DUMPLING FEAST!');
       case GameEvent.combo:
         Sfx.instance.play(Sound.combo);
       case GameEvent.win:
         Sfx.instance.play(Sound.fanfare);
+        HapticFeedback.mediumImpact();
       case GameEvent.lose:
         Sfx.instance.play(Sound.sad);
     }
@@ -177,7 +183,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void _onPanEnd(DragEndDetails details) {
-    if (details.velocity.pixelsPerSecond.dy > 900 &&
+    if (details.velocity.pixelsPerSecond.dy > 650 &&
         details.velocity.pixelsPerSecond.dy >
             details.velocity.pixelsPerSecond.dx.abs() * 1.5) {
       _controller.hardDrop();
@@ -225,6 +231,7 @@ class _GameScreenState extends State<GameScreen>
             icon: Icons.pause_rounded,
             color: DumplingTheme.lemon,
             size: 48,
+            label: 'Pause',
             onPressed: () {
               Sfx.instance.play(Sound.click);
               _controller.pause();
@@ -251,11 +258,19 @@ class _GameScreenState extends State<GameScreen>
                   ],
                 ),
                 const SizedBox(height: 4),
-                _GoalBar(
-                  progress: _controller.goalProgress,
-                  label:
-                      '${_controller.linesCleared} / ${level.goalLines} lines',
-                ),
+                if (level.endless)
+                  Text(
+                    '${_controller.linesCleared} lines · '
+                    'Best ${widget.store.bestScoreFor(level.number)}',
+                    style: DumplingTheme.body(
+                        size: 15, color: DumplingTheme.inkSoft),
+                  )
+                else
+                  _GoalBar(
+                    progress: _controller.goalProgress,
+                    label: '${_controller.linesCleared} / '
+                        '${level.goalLines}',
+                  ),
               ],
             ),
           ),
@@ -303,24 +318,30 @@ class _GameScreenState extends State<GameScreen>
             icon: Icons.chevron_left_rounded,
             color: DumplingTheme.sky,
             size: 68,
+            repeat: true,
+            label: 'Move left',
             onPressed: _controller.moveLeft,
           ),
           BouncyIconButton(
             icon: Icons.chevron_right_rounded,
             color: DumplingTheme.sky,
             size: 68,
+            repeat: true,
+            label: 'Move right',
             onPressed: _controller.moveRight,
           ),
           BouncyIconButton(
             icon: Icons.rotate_right_rounded,
             color: DumplingTheme.lilac,
             size: 68,
+            label: 'Turn',
             onPressed: _controller.rotate,
           ),
           BouncyIconButton(
             icon: Icons.keyboard_double_arrow_down_rounded,
             color: DumplingTheme.peach,
             size: 68,
+            label: 'Drop',
             onPressed: _controller.hardDrop,
           ),
         ],
@@ -382,29 +403,155 @@ class _GameScreenState extends State<GameScreen>
     );
   }
 
+  /// The "New sticker!" panel, shown on win and on loss alike so a
+  /// reward never plays its chime invisibly.
+  List<Widget> _newBadgeCards() {
+    if (_newBadges.isEmpty) return const [];
+    return [
+      const SizedBox(height: 14),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: DumplingTheme.lemon.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('New sticker${_newBadges.length > 1 ? 's' : ''}!',
+                style: DumplingTheme.display(size: 20)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 10,
+              alignment: WrapAlignment.center,
+              children: [
+                for (final badge in _newBadges)
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(badge.emoji,
+                          style: const TextStyle(fontSize: 34)),
+                      Text(badge.name,
+                          style: DumplingTheme.body(size: 14)),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  Widget _starTarget(int stars, int score) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < stars; i++)
+          const Icon(Icons.star_rounded,
+              size: 22, color: DumplingTheme.star),
+        const SizedBox(width: 6),
+        Text('$score', style: DumplingTheme.body(size: 18)),
+      ],
+    );
+  }
+
+  Widget _hintRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 24, color: DumplingTheme.ink),
+          const SizedBox(width: 8),
+          Text(text, style: DumplingTheme.body(size: 17)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildReadyOverlay() {
+    final level = widget.level;
+    final showHints = level.number <= 2 || level.endless;
     return _overlayCard(children: [
-      const DumplingMascot(size: 96),
-      const SizedBox(height: 12),
-      Text(widget.level.name, style: DumplingTheme.display(size: 30)),
+      const DumplingMascot(size: 88),
+      const SizedBox(height: 10),
+      Text(level.name, style: DumplingTheme.display(size: 30)),
       const SizedBox(height: 6),
       Text(
-        'Clear ${widget.level.goalLines} lines!',
+        level.endless
+            ? 'How long can you go?'
+            : 'Clear ${level.goalLines} lines!',
         style: DumplingTheme.body(size: 20, color: DumplingTheme.inkSoft),
       ),
-      const SizedBox(height: 20),
+      if (!level.endless) ...[
+        const SizedBox(height: 8),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _starTarget(2, level.twoStarScore),
+            const SizedBox(width: 18),
+            _starTarget(3, level.threeStarScore),
+          ],
+        ),
+      ],
+      if (showHints) ...[
+        const SizedBox(height: 12),
+        Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: DumplingTheme.lemon.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _hintRow(Icons.touch_app_rounded, 'Tap = turn'),
+              _hintRow(Icons.swipe_rounded, 'Slide = move'),
+              _hintRow(Icons.swipe_down_alt_rounded, 'Flick down = drop'),
+            ],
+          ),
+        ),
+      ],
+      const SizedBox(height: 18),
       BouncyButton(
         color: DumplingTheme.mint,
         onPressed: _controller.start,
-        child: Text("Let's Go!", style: DumplingTheme.display(size: 28)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.play_arrow_rounded,
+                size: 34, color: DumplingTheme.ink),
+            Text("Let's Go!", style: DumplingTheme.display(size: 28)),
+          ],
+        ),
       ),
     ]);
   }
 
   Widget _buildPauseOverlay() {
+    final store = widget.store;
     return _overlayCard(children: [
       Text('Paused', style: DumplingTheme.display(size: 34)),
-      const SizedBox(height: 20),
+      const SizedBox(height: 12),
+      BouncyIconButton(
+        icon: store.soundOn
+            ? Icons.volume_up_rounded
+            : Icons.volume_off_rounded,
+        color: DumplingTheme.lemon,
+        size: 56,
+        label: store.soundOn ? 'Turn sound off' : 'Turn sound on',
+        onPressed: () async {
+          final next = !store.soundOn;
+          await store.setSoundOn(next);
+          Sfx.instance.setEnabled(next);
+          if (next) await Sfx.instance.startMusic();
+          if (mounted) setState(() {});
+        },
+      ),
+      const SizedBox(height: 12),
       BouncyButton(
         color: DumplingTheme.mint,
         onPressed: _controller.resume,
@@ -427,52 +574,56 @@ class _GameScreenState extends State<GameScreen>
 
   Widget _buildWinOverlay() {
     final stars = _controller.starsForScore();
+    final isFinale = widget.level.number == levels.length;
     final nextLevel = widget.level.number < levels.length
         ? levels[widget.level.number]
         : null;
     return _overlayCard(children: [
-      Text('Level Complete!', style: DumplingTheme.display(size: 30)),
+      if (isFinale) ...[
+        const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DumplingMascot(size: 64, color: DumplingTheme.mint),
+            DumplingMascot(size: 84, color: DumplingTheme.lemon),
+            DumplingMascot(size: 64, color: DumplingTheme.pink),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text('You beat the game!',
+            textAlign: TextAlign.center,
+            style: DumplingTheme.display(size: 30)),
+        Text('Dumpling Master!',
+            style: DumplingTheme.body(
+                size: 20, color: DumplingTheme.inkSoft)),
+      ] else
+        Text('Level Complete!', style: DumplingTheme.display(size: 30)),
       const SizedBox(height: 10),
       StarsRow(stars: stars, size: 54, animated: true),
       const SizedBox(height: 8),
       Text('Score: ${_controller.score}',
           style: DumplingTheme.body(size: 22)),
-      if (_newBadges.isNotEmpty) ...[
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: DumplingTheme.lemon.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('New sticker${_newBadges.length > 1 ? 's' : ''}!',
-                  style: DumplingTheme.display(size: 20)),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 10,
-                alignment: WrapAlignment.center,
-                children: [
-                  for (final badge in _newBadges)
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(badge.emoji,
-                            style: const TextStyle(fontSize: 34)),
-                        Text(badge.name,
-                            style: DumplingTheme.body(size: 14)),
-                      ],
-                    ),
-                ],
-              ),
-            ],
-          ),
+      Text('Best: ${widget.store.bestScoreFor(widget.level.number)}',
+          style:
+              DumplingTheme.body(size: 16, color: DumplingTheme.inkSoft)),
+      if (stars < 3) ...[
+        const SizedBox(height: 4),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Next goal:  ',
+                style: DumplingTheme.body(
+                    size: 16, color: DumplingTheme.inkSoft)),
+            _starTarget(
+                stars + 1,
+                stars >= 2
+                    ? widget.level.threeStarScore
+                    : widget.level.twoStarScore),
+          ],
         ),
       ],
+      ..._newBadgeCards(),
       const SizedBox(height: 18),
-      if (nextLevel != null && widget.store.isUnlocked(nextLevel.number))
+      if (nextLevel != null)
         BouncyButton(
           color: DumplingTheme.mint,
           onPressed: () {
@@ -506,24 +657,34 @@ class _GameScreenState extends State<GameScreen>
   }
 
   Widget _buildLoseOverlay() {
+    final endless = widget.level.endless;
     return _overlayCard(children: [
-      const DumplingMascot(size: 90, color: DumplingTheme.sky),
+      DumplingMascot(
+          size: 90,
+          color: endless ? DumplingTheme.lemon : DumplingTheme.sky),
       const SizedBox(height: 10),
-      Text('Oh no, the basket\nis full!',
+      Text(
+          endless ? 'Great snacking!' : 'Oh no, the basket\nis full!',
           textAlign: TextAlign.center,
           style: DumplingTheme.display(size: 26)),
       const SizedBox(height: 6),
       Text(
-        'You cleared ${_controller.linesCleared} lines. '
-        'You can do it!',
+        endless
+            ? '${_controller.linesCleared} lines · Score '
+                '${_controller.score}\n'
+                'Best: ${widget.store.bestScoreFor(widget.level.number)}'
+            : 'You cleared ${_controller.linesCleared} lines. '
+                'You can do it!',
         textAlign: TextAlign.center,
         style: DumplingTheme.body(size: 18, color: DumplingTheme.inkSoft),
       ),
+      ..._newBadgeCards(),
       const SizedBox(height: 18),
       BouncyButton(
         color: DumplingTheme.mint,
         onPressed: _restart,
-        child: Text('Try Again!', style: DumplingTheme.display(size: 26)),
+        child: Text(endless ? 'Play Again!' : 'Try Again!',
+            style: DumplingTheme.display(size: 26)),
       ),
       const SizedBox(height: 12),
       BouncyButton(
@@ -565,7 +726,21 @@ class _GoalBar extends StatelessWidget {
             ),
           ),
         ),
-        Text(label, style: DumplingTheme.body(size: 14)),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+          decoration: BoxDecoration(
+            color: DumplingTheme.cream.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, style: DumplingTheme.body(size: 14)),
+              const SizedBox(width: 3),
+              const Text('🥟', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
       ],
     );
   }

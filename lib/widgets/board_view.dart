@@ -63,9 +63,22 @@ class BoardViewState extends State<BoardView>
     super.initState();
     widget.controller.addEventListener(_onGameEvent);
     _ticker = AnimationController(
-        vsync: this, duration: const Duration(days: 1))
+        vsync: this, duration: const Duration(hours: 1))
       ..addListener(_step)
-      ..forward();
+      ..repeat();
+  }
+
+  @override
+  void didUpdateWidget(BoardView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A restart swaps in a fresh controller; follow it or every
+    // pop/particle/shake goes silent for the rest of the session.
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeEventListener(_onGameEvent);
+      widget.controller.addEventListener(_onGameEvent);
+      _particles.clear();
+      _clearRows = const [];
+    }
   }
 
   @override
@@ -77,9 +90,11 @@ class BoardViewState extends State<BoardView>
 
   void _step() {
     final now = _ticker.lastElapsedDuration ?? Duration.zero;
-    final dt =
+    var dt =
         (now - _lastTick).inMicroseconds / Duration.microsecondsPerSecond;
     _lastTick = now;
+    // repeat() wraps the elapsed clock once per period.
+    if (dt < 0) dt = 0;
     _time += dt;
     if (dt <= 0) return;
 
@@ -89,7 +104,16 @@ class BoardViewState extends State<BoardView>
       p.life -= dt;
     }
     _particles.removeWhere((p) => p.life <= 0);
-    setState(() {});
+
+    // Repaint only while something moves. Idle overlays (ready,
+    // paused, results) must not burn a full-board paint per frame.
+    final phase = widget.controller.phase;
+    final animating = phase == GamePhase.playing ||
+        phase == GamePhase.clearing ||
+        _particles.isNotEmpty ||
+        (_time - _lockPulse) < 0.3 ||
+        (_time - _shakeStart) < 0.5;
+    if (animating) setState(() {});
   }
 
   void _onGameEvent(GameEvent event, {List<int>? rows}) {

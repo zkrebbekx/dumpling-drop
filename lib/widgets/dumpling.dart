@@ -185,6 +185,13 @@ class _DumplingMascotState extends State<DumplingMascot>
 
   @override
   Widget build(BuildContext context) {
+    if (MediaQuery.of(context).disableAnimations) {
+      return CustomPaint(
+        size: Size.square(widget.size),
+        painter: _MascotPainter(
+            color: widget.color, squish: 0.1, eyeOpen: 1),
+      );
+    }
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {

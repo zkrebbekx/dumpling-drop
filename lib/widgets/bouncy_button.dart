@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../audio/sfx.dart';
@@ -5,12 +7,18 @@ import '../theme.dart';
 
 /// A big, rounded, squishy button. Scales down when pressed and plays
 /// a click. Sized for small hands.
+///
+/// With [repeat], the button fires on press and keeps firing while
+/// held — for the move buttons, so crossing the board is one hold,
+/// not nine taps.
 class BouncyButton extends StatefulWidget {
   final Widget child;
   final VoidCallback onPressed;
   final Color color;
   final EdgeInsets padding;
   final bool silent;
+  final bool repeat;
+  final String? semanticLabel;
 
   const BouncyButton({
     super.key,
@@ -19,6 +27,8 @@ class BouncyButton extends StatefulWidget {
     this.color = DumplingTheme.peach,
     this.padding = const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
     this.silent = false,
+    this.repeat = false,
+    this.semanticLabel,
   });
 
   @override
@@ -27,6 +37,39 @@ class BouncyButton extends StatefulWidget {
 
 class _BouncyButtonState extends State<BouncyButton> {
   bool _pressed = false;
+  Timer? _holdDelay;
+  Timer? _holdRepeat;
+
+  @override
+  void dispose() {
+    _cancelHold();
+    super.dispose();
+  }
+
+  void _cancelHold() {
+    _holdDelay?.cancel();
+    _holdRepeat?.cancel();
+  }
+
+  void _down() {
+    setState(() => _pressed = true);
+    if (!widget.repeat) return;
+    widget.onPressed();
+    _holdDelay = Timer(const Duration(milliseconds: 300), () {
+      _holdRepeat = Timer.periodic(
+        const Duration(milliseconds: 130),
+        (_) => widget.onPressed(),
+      );
+    });
+  }
+
+  void _up({required bool fire}) {
+    setState(() => _pressed = false);
+    _cancelHold();
+    if (widget.repeat || !fire) return;
+    if (!widget.silent) Sfx.instance.play(Sound.click);
+    widget.onPressed();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,31 +77,32 @@ class _BouncyButtonState extends State<BouncyButton> {
         .withLightness(
             (HSLColor.fromColor(widget.color).lightness - 0.18).clamp(0, 1))
         .toColor();
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        if (!widget.silent) Sfx.instance.play(Sound.click);
-        widget.onPressed();
-      },
-      child: AnimatedScale(
-        scale: _pressed ? 0.92 : 1,
-        duration: const Duration(milliseconds: 90),
-        child: Container(
-          padding: widget.padding,
-          decoration: BoxDecoration(
-            color: widget.color,
-            borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: dark.withValues(alpha: 0.5), width: 3),
-            boxShadow: [
-              BoxShadow(
-                color: dark.withValues(alpha: 0.45),
-                offset: Offset(0, _pressed ? 2 : 5),
-              ),
-            ],
+    return Semantics(
+      button: true,
+      label: widget.semanticLabel,
+      child: GestureDetector(
+        onTapDown: (_) => _down(),
+        onTapCancel: () => _up(fire: false),
+        onTapUp: (_) => _up(fire: true),
+        child: AnimatedScale(
+          scale: _pressed ? 0.92 : 1,
+          duration: const Duration(milliseconds: 90),
+          child: Container(
+            padding: widget.padding,
+            decoration: BoxDecoration(
+              color: widget.color,
+              borderRadius: BorderRadius.circular(26),
+              border:
+                  Border.all(color: dark.withValues(alpha: 0.5), width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: dark.withValues(alpha: 0.45),
+                  offset: Offset(0, _pressed ? 2 : 5),
+                ),
+              ],
+            ),
+            child: widget.child,
           ),
-          child: widget.child,
         ),
       ),
     );
@@ -71,6 +115,8 @@ class BouncyIconButton extends StatelessWidget {
   final VoidCallback onPressed;
   final Color color;
   final double size;
+  final bool repeat;
+  final String? label;
 
   const BouncyIconButton({
     super.key,
@@ -78,6 +124,8 @@ class BouncyIconButton extends StatelessWidget {
     required this.onPressed,
     this.color = DumplingTheme.sky,
     this.size = 64,
+    this.repeat = false,
+    this.label,
   });
 
   @override
@@ -86,6 +134,8 @@ class BouncyIconButton extends StatelessWidget {
       onPressed: onPressed,
       color: color,
       silent: true,
+      repeat: repeat,
+      semanticLabel: label,
       padding: EdgeInsets.zero,
       child: SizedBox(
         width: size,

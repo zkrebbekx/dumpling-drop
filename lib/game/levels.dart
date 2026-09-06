@@ -33,6 +33,9 @@ class LevelConfig {
   final int twoStarScore;
   final int threeStarScore;
 
+  /// Endless free play: no goal, no win, gravity ramps up slowly.
+  final bool endless;
+
   const LevelConfig({
     required this.number,
     required this.name,
@@ -44,6 +47,7 @@ class LevelConfig {
     required this.pieceKinds,
     required this.twoStarScore,
     required this.threeStarScore,
+    this.endless = false,
   });
 }
 
@@ -97,9 +101,52 @@ LevelConfig _level(
     gravity: Duration(milliseconds: gravityMs),
     goalLines: goalLines,
     pieceKinds: kinds,
-    // Reward multi-line clears: two stars needs some doubles, three
-    // stars needs consistent big clears.
-    twoStarScore: goalLines * 140,
-    threeStarScore: goalLines * 220,
+    // Reward multi-line clears: two stars needs hard drops or some
+    // doubles, three stars needs a few big clears.
+    twoStarScore: goalLines * 130,
+    threeStarScore: goalLines * 180,
   );
 }
+
+/// Endless baskets. Each one unlocks when its difficulty is beaten.
+final List<LevelConfig> freePlayLevels = [
+  const LevelConfig(
+    number: 101,
+    name: 'Snack Time',
+    difficulty: Difficulty.easy,
+    rows: 14,
+    cols: 8,
+    gravity: Duration(milliseconds: 850),
+    goalLines: 999,
+    pieceKinds: _friendly,
+    twoStarScore: 0,
+    threeStarScore: 0,
+    endless: true,
+  ),
+  const LevelConfig(
+    number: 102,
+    name: 'Sizzle Time',
+    difficulty: Difficulty.medium,
+    rows: 14,
+    cols: 9,
+    gravity: Duration(milliseconds: 620),
+    goalLines: 999,
+    pieceKinds: _all,
+    twoStarScore: 0,
+    threeStarScore: 0,
+    endless: true,
+  ),
+  const LevelConfig(
+    number: 103,
+    name: 'Fire Time',
+    difficulty: Difficulty.hard,
+    rows: 14,
+    cols: 10,
+    gravity: Duration(milliseconds: 420),
+    goalLines: 999,
+    pieceKinds: _all,
+    twoStarScore: 0,
+    threeStarScore: 0,
+    endless: true,
+  ),
+];

@@ -35,6 +35,9 @@ class _SteamBackgroundState extends State<SteamBackground>
 
   @override
   Widget build(BuildContext context) {
+    // Honor the platform reduced-motion setting: skip the drifting
+    // steam and keep the calm gradient.
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -47,12 +50,13 @@ class _SteamBackgroundState extends State<SteamBackground>
             ),
           ),
         ),
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) => CustomPaint(
-            painter: _SteamPainter(_controller.value),
+        if (!reduceMotion)
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) => CustomPaint(
+              painter: _SteamPainter(_controller.value),
+            ),
           ),
-        ),
         widget.child,
       ],
     );

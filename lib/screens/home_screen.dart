@@ -38,6 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         : Icons.volume_off_rounded,
                     color: DumplingTheme.lemon,
                     size: 52,
+                    label:
+                        store.soundOn ? 'Turn sound off' : 'Turn sound on',
                     onPressed: () async {
                       final next = !store.soundOn;
                       await store.setSoundOn(next);
